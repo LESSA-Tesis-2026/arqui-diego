@@ -1,0 +1,75 @@
+# ─────────────────────────────────────────
+#  Python
+# ─────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# ─────────────────────────────────────────
+#  Entornos virtuales
+# ─────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ─────────────────────────────────────────
+#  Datos de entrenamiento (archivos grandes)
+# ─────────────────────────────────────────
+# Frames capturados por cámara
+modeloTutorial/frame_actions/
+
+# Keypoints / datasets en HDF5
+modeloTutorial/data/keypoints/*.h5
+modeloTutorialFtGemini/data_h5/*.h5
+
+# ─────────────────────────────────────────
+#  Modelos entrenados
+# ─────────────────────────────────────────
+modeloTutorial/models/*.keras
+modeloTutorialFtGemini/models/*.keras
+modeloTutorialFtGemini/modelo1/*.keras
+modeloTutorialFtGemini/modelo1/*.h5
+
+# ─────────────────────────────────────────
+#  Métricas y gráficas generadas
+# ─────────────────────────────────────────
+modeloTutorialFtGemini/metricas_modelo/
+
+# ─────────────────────────────────────────
+#  Jupyter Notebooks (checkpoints)
+# ─────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ─────────────────────────────────────────
+#  IDEs y editores
+# ─────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─────────────────────────────────────────
+#  Sistema operativo
+# ─────────────────────────────────────────
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ─────────────────────────────────────────
+#  Logs y archivos temporales
+# ─────────────────────────────────────────
+*.log
+*.tmp
+*.temp
