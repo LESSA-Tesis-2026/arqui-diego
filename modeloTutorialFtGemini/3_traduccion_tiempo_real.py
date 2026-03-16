@@ -3,12 +3,11 @@ import numpy as np
 import mediapipe as mp
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+import collections
 from config import *
 
-# CSLR - Continuous Sign Language Recognition
-# TODO: buscar directamente esto
-
 def draw_keypoints(image, results):
+    # Usamos la función de dibujo estándar de MediaPipe para la interfaz
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
     if results.pose_landmarks:
@@ -18,28 +17,24 @@ def draw_keypoints(image, results):
     if results.right_hand_landmarks:
         mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
-def real_time_translation(threshold=0.70):
+def real_time_translation(threshold=0.75):
     model = load_model(MODEL_PATH)
     mp_holistic = mp.solutions.holistic
     
-    sequence = []
+    # 1. PARÁMETROS CSLR (Ajustables según la velocidad de tus señas)
+    WINDOW_SIZE = 30           # Tamaño de la ventana deslizante (aprox. 1 segundo de video)
+    VOTING_BUFFER_SIZE = 10    # Historial de predicciones para el suavizado
+    MIN_VOTES = 7              # Votos necesarios para confirmar una palabra
+    
+    # 2. ESTRUCTURAS DE DATOS CONTINUAS
+    sequence = collections.deque(maxlen=WINDOW_SIZE)
+    predictions_buffer = collections.deque(maxlen=VOTING_BUFFER_SIZE)
+    
+    # 3. MÁQUINA DE ESTADOS
     sentence = []
+    last_emitted_word = "nada"
+    nada_counter = 0           # Cuenta cuánto tiempo llevamos en reposo
     current_probs = np.zeros(len(WORDS))
-    
-    # --- PARÁMETROS DE TRADUCCIÓN CONTINUA ---
-    # 1. Ventana Deslizante: Cuántos frames recientes forman una seña. 
-    # (30 frames = aprox 1 segundo de movimiento fluido)
-    REAL_TIME_WINDOW = 20 
-    
-    # 2. Votación Continua (Estabilidad)
-    prediction_buffer = []
-    VOTING_WINDOW = 7       # Memoria de las últimas 15 predicciones
-    VOTES_REQUIRED = 3      # Exigimos consenso para evitar errores
-    
-    # 3. Enfriamiento (Evitar repeticiones indeseadas)
-    cooldown_counter = 0     
-    COOLDOWN_FRAMES = 15     # Frames que espera antes de aceptar otra seña
-    last_word = ""           # Rastrea la última palabra impresa
     
     cap = cv2.VideoCapture(0)
     
@@ -51,59 +46,63 @@ def real_time_translation(threshold=0.70):
             image, results = mediapipe_detection(frame, holistic)
             draw_keypoints(image, results)
             
-            # 1. ACUMULACIÓN CONTINUA (El flujo nunca se limpia por completo)
+            # --- FASE 1: EXTRACCIÓN Y VENTANA DESLIZANTE ---
             if results.left_hand_landmarks or results.right_hand_landmarks:
+                # Utilizamos la función de config.py que ya calcula coordenadas relativas a la nariz
                 keypoints = extract_keypoints(results)
                 sequence.append(keypoints)
             else:
-                # Si bajamos las manos, inyectamos ceros para "diluir" la ventana
+                # Si las manos salen de cámara, inyectamos ceros para mantener el flujo de tiempo real
                 sequence.append(np.zeros(LENGTH_KEYPOINTS))
             
-            # La ventana siempre avanza, manteniendo estrictamente los últimos X frames
-            sequence = sequence[-REAL_TIME_WINDOW:]
-            
-            # 2. LÓGICA DE PREDICCIÓN CONTINUA
-            if len(sequence) == REAL_TIME_WINDOW:
+            # --- FASE 2: PREDICCIÓN CONTINUA ---
+            if len(sequence) == WINDOW_SIZE:
+                # El modelo espera MAX_FRAMES (60). Rellenamos nuestra ventana de 30 con ceros al final.
+                # La capa Masking ignorará este relleno matemático.
+                pad_seq = pad_sequences([list(sequence)], maxlen=MAX_FRAMES, padding='post', dtype='float32')
                 
-                # TRUCO DE PADDING: Tomamos los 30 frames reales y los llevamos a 60
-                # Esto alinea los datos para que sean idénticos a los del entrenamiento
-                pad_seq = pad_sequences([sequence], maxlen=MAX_FRAMES, padding='post', dtype='float32')
                 res = model.predict(pad_seq, verbose=0)[0]
                 current_probs = res 
-                
                 best_match_idx = np.argmax(res)
                 
-                # Asignar la palabra si supera la confianza
                 if res[best_match_idx] > threshold:
                     current_word = WORDS[best_match_idx]
                 else:
-                    current_word = "ninguna"
-                    
-                prediction_buffer.append(current_word)
-                prediction_buffer = prediction_buffer[-VOTING_WINDOW:]
+                    current_word = "nada"
                 
-                # 3. LÓGICA DE EMISIÓN Y ENFRIAMIENTO
-                if cooldown_counter > 0:
-                    cooldown_counter -= 1
+                # Agregamos la predicción al búfer de votación
+                predictions_buffer.append(current_word)
+                
+                # --- FASE 3: SUAVIZADO Y LÓGICA DE TRANSICIÓN ---
+                # Validamos cuál es la palabra más repetida en el último instante de tiempo
+                word_counts = collections.Counter(predictions_buffer)
+                most_common_word, count = word_counts.most_common(1)[0]
+                
+                if count >= MIN_VOTES:
+                    stable_word = most_common_word
                 else:
-                    # Si detectamos una palabra con suficientes votos
-                    if current_word != "ninguna" and prediction_buffer.count(current_word) >= VOTES_REQUIRED:
-                        
-                        # Imprimir solo si es diferente a la última seña que hicimos
-                        if current_word != last_word:
-                            sentence.append(current_word)
-                            last_word = current_word
-                            cooldown_counter = COOLDOWN_FRAMES # Activar enfriamiento
-                            
-                            if len(sentence) > 5:
-                                sentence = sentence[-5:]
+                    stable_word = "nada"
                 
-                # Reseteamos la 'última palabra' si el usuario se queda en reposo
-                # Esto permite que pueda repetir la misma palabra (ej. "gracias", "gracias") si hace una pausa
-                if prediction_buffer.count("ninguna") >= 10:
-                    last_word = ""
-            
-            # 4. INTERFAZ GRÁFICA (UI)
+                # Máquina de estados para emitir la palabra a la oración
+                if stable_word != "nada":
+                    nada_counter = 0 # Reiniciamos el contador de reposo
+                    
+                    # Solo agregamos si es una palabra nueva (evita "hola hola hola")
+                    if stable_word != last_emitted_word:
+                        sentence.append(stable_word)
+                        last_emitted_word = stable_word
+                        
+                        # Mantenemos la oración en un máximo de 5 palabras para no saturar la pantalla
+                        if len(sentence) > 5:
+                            sentence = sentence[-5:]
+                            
+                else:
+                    # Si detectamos "nada" constantemente, permitimos que el usuario repita la última palabra
+                    nada_counter += 1
+                    if nada_counter > 15: # Medio segundo de pausa real
+                        last_emitted_word = "nada"
+
+            # --- INTERFAZ GRÁFICA ---
             cv2.rectangle(image, (0, 0), (640, 40), (245, 117, 16), -1)
             cv2.putText(image, ' '.join(sentence).upper(), (10, 30), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
@@ -119,7 +118,7 @@ def real_time_translation(threshold=0.70):
                 cv2.putText(image, text, (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 1, cv2.LINE_AA)
                 y_offset += 30
             
-            cv2.imshow('Traductor LESSA', image)
+            cv2.imshow('Traductor CSLR LESSA', image)
             if cv2.waitKey(10) & 0xFF == ord('q'):
                 break
                 
@@ -127,4 +126,4 @@ def real_time_translation(threshold=0.70):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    real_time_translation(threshold=0.65)
+    real_time_translation(threshold=0.75)

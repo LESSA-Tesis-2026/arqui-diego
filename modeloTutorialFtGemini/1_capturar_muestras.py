@@ -32,6 +32,12 @@ def draw_custom_keypoints(image, results):
             mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
 def capture_dynamic_samples(word, target_samples=60):
+
+    # --- NUEVA REGLA: Aumento automático para la clase "nada" ---
+    if word.lower() == "nada":
+        target_samples = int(target_samples * 1.75)
+        print(f"\n[INFO] Clase 'nada' detectada. La meta se ajustó automáticamente a {target_samples} muestras.")
+
     create_folder_if_not_exists(DATA_PATH)
     file_path = os.path.join(DATA_PATH, f"{word}.h5")
     
@@ -107,7 +113,7 @@ def capture_dynamic_samples(word, target_samples=60):
 
 if __name__ == "__main__":
     # La meta global. Si ya hay algunos, solamente completara hasta el maximo, no elimina, solo agrega
-    # ACTUAL: 40
+    # ACTUAL: 80
     META_MUESTRAS = 80 
     
     for word in WORDS:

@@ -35,16 +35,41 @@ def mediapipe_detection(image, model):
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     return image, results
 
+# funcion modificada para obtener coordenadas relativas
 def extract_keypoints(results):
-    pose = np.array([[res.x, res.y, res.z, res.visibility] for res in results.pose_landmarks.landmark]).flatten() if results.pose_landmarks else np.zeros(33*4)
-    lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() if results.left_hand_landmarks else np.zeros(21*3)
-    rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
-    
-    # Extracción selectiva del rostro
+    # 1. Definir la Nariz (Pose Landmark 0) como nuestro "Ancla" central.
+    # Si MediaPipe no detecta el cuerpo, el ancla es 0,0,0
+    if results.pose_landmarks:
+        ancla_x = results.pose_landmarks.landmark[0].x
+        ancla_y = results.pose_landmarks.landmark[0].y
+        ancla_z = results.pose_landmarks.landmark[0].z
+    else:
+        ancla_x, ancla_y, ancla_z = 0.0, 0.0, 0.0
+
+    # 2. Extraer POSE restando el ancla a cada punto (Movimiento puro)
+    if results.pose_landmarks:
+        pose = np.array([[res.x - ancla_x, res.y - ancla_y, res.z - ancla_z, res.visibility] 
+                         for res in results.pose_landmarks.landmark]).flatten()
+    else:
+        pose = np.zeros(33 * 4)
+
+    # 3. Extraer MANOS y ROSTRO restando el ancla
+    if results.left_hand_landmarks:
+        lh = np.array([[res.x - ancla_x, res.y - ancla_y, res.z - ancla_z] 
+                       for res in results.left_hand_landmarks.landmark]).flatten()
+    else:
+        lh = np.zeros(21 * 3)
+
+    if results.right_hand_landmarks:
+        rh = np.array([[res.x - ancla_x, res.y - ancla_y, res.z - ancla_z] 
+                       for res in results.right_hand_landmarks.landmark]).flatten()
+    else:
+        rh = np.zeros(21 * 3)
+        
     if results.face_landmarks:
-        face = np.array([[results.face_landmarks.landmark[i].x, 
-                          results.face_landmarks.landmark[i].y, 
-                          results.face_landmarks.landmark[i].z] 
+        face = np.array([[results.face_landmarks.landmark[i].x - ancla_x, 
+                          results.face_landmarks.landmark[i].y - ancla_y, 
+                          results.face_landmarks.landmark[i].z - ancla_z] 
                          for i in SELECTED_FACE_INDICES]).flatten()
     else:
         face = np.zeros(len(SELECTED_FACE_INDICES) * 3)
