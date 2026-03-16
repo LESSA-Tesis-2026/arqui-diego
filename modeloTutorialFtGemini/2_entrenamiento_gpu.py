@@ -62,7 +62,7 @@ def build_model():
     model = Sequential([
  
         # Masking ignora los frames con 0s, los cuales se han utilizado para rellenar y estandarizar todas las secuencias con la misma longitud
-        
+        # interpolar, ver como hacerlo
         Masking(mask_value=0.0, input_shape=(MAX_FRAMES, LENGTH_KEYPOINTS)),
         
         # SpatialDropout apaga canales enteros (ej. "ciega" a la red de la coordenada Z por un rato; ignora la profundidad)
