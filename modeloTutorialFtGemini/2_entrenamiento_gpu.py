@@ -66,8 +66,6 @@ def data_augmentation(X_train, y_train):
         aug_labels.append(label)
         
     return aug_sequences, aug_labels
-        
-    return aug_sequences, aug_labels
 
 def load_raw_data_from_h5():
     sequences, labels = [], []
