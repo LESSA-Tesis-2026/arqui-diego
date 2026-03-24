@@ -22,9 +22,9 @@ def real_time_translation(threshold=0.75):
     mp_holistic = mp.solutions.holistic
     
     # 1. PARÁMETROS CSLR (Ajustables según la velocidad de tus señas)
-    WINDOW_SIZE = 30           # Tamaño de la ventana deslizante (aprox. 1 segundo de video)
-    VOTING_BUFFER_SIZE = 10    # Historial de predicciones para el suavizado
-    MIN_VOTES = 7              # Votos necesarios para confirmar una palabra
+    WINDOW_SIZE = 40           # Tamaño de la ventana deslizante (aprox. 1 segundo de video)
+    VOTING_BUFFER_SIZE = 15    # Historial de predicciones para el suavizado
+    MIN_VOTES = 10             # Votos necesarios para confirmar una palabra
     
     # 2. ESTRUCTURAS DE DATOS CONTINUAS
     sequence = collections.deque(maxlen=WINDOW_SIZE)
@@ -57,7 +57,7 @@ def real_time_translation(threshold=0.75):
             
             # --- FASE 2: PREDICCIÓN CONTINUA ---
             if len(sequence) == WINDOW_SIZE:
-                # El modelo espera MAX_FRAMES (60). Rellenamos nuestra ventana de 30 con ceros al final.
+                # El modelo espera MAX_FRAMES (60). Rellenamos nuestra ventana de 40 con ceros al final.
                 # La capa Masking ignorará este relleno matemático.
                 pad_seq = pad_sequences([list(sequence)], maxlen=MAX_FRAMES, padding='post', dtype='float32')
                 

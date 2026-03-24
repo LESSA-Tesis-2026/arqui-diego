@@ -25,6 +25,7 @@ modeloTutorial/frame_actions/
 # Keypoints / datasets en HDF5
 modeloTutorial/data/keypoints/*.h5
 modeloTutorialFtGemini/data_h5/*.h5
+modeloTutorialFtGemini/data_h5_v1/*.h5
 
 # ─────────────────────────────────────────
 #  Modelos entrenados
@@ -33,6 +34,13 @@ modeloTutorial/models/*.keras
 modeloTutorialFtGemini/models/*.keras
 modeloTutorialFtGemini/modelo1/*.keras
 modeloTutorialFtGemini/modelo1/*.h5
+modeloTutorialFtGemini/modelo1/*.png
+modeloTutorialFtGemini/modelo2/*.keras
+modeloTutorialFtGemini/modelo2/*.h5
+modeloTutorialFtGemini/modelo2/*.png
+modeloTutorialFtGemini/modelo3/*.keras
+modeloTutorialFtGemini/modelo3/*.h5
+modeloTutorialFtGemini/modelo3/*.png
 
 # ─────────────────────────────────────────
 #  Métricas y gráficas generadas

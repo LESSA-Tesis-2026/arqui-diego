@@ -26,6 +26,9 @@ MODEL_PATH = os.path.join(MODEL_FOLDER_PATH, "modelo_señas_lstm.keras")
 # DICCIONARIO DE PALABRAS
 WORDS = ["hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate", "nada"] # Agrega aquí todas tus palabras
 
+# buenas tardes, buenas noches, como estas, cual es tu nombre, permiso, adios, perdon, otra vez, por favor, duda, nos vemos luego, por que?
+# si, no, talvez, no se, 
+
 # FUNCIONES MEDIAPIPE
 def mediapipe_detection(image, model):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

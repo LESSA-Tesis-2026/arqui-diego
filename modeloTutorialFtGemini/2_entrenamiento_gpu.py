@@ -23,22 +23,49 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
+#def data_augmentation(X_train, y_train):
+#    aug_sequences, aug_labels = [], []
+#    for seq, label in zip(X_train, y_train):
+#        # 1. Original
+#        aug_sequences.append(seq)
+#        aug_labels.append(label)
+#        
+#        # 2. Ruido MUY suave (simula pequeños errores de cámara)
+#        noise_1 = np.random.normal(0, 0.005, seq.shape)
+#        aug_sequences.append(seq + noise_1)
+#        aug_labels.append(label)
+#
+#        # 3. Ruido moderado (pero menor que antes)
+#        noise_2 = np.random.normal(0, 0.010, seq.shape)
+#        aug_sequences.append(seq + noise_2)
+#        aug_labels.append(label)
+#        
+#    return aug_sequences, aug_labels
 def data_augmentation(X_train, y_train):
     aug_sequences, aug_labels = [], []
     for seq, label in zip(X_train, y_train):
-        # 1. Original
+        # 1. ORIGINAL (Intacto)
         aug_sequences.append(seq)
         aug_labels.append(label)
         
-        # 2. Ruido MUY suave (simula pequeños errores de cámara)
-        noise_1 = np.random.normal(0, 0.005, seq.shape)
-        aug_sequences.append(seq + noise_1)
+        # 2. RUIDO MICROSCÓPICO (Simula temblor milimétrico de la cámara)
+        # Bajamos la desviación a 0.002 porque las distancias relativas a la nariz son pequeñas
+        noise_1 = np.random.normal(0, 0.002, seq.shape)
+        # Protegemos la visibilidad de la pose (asumiendo que los primeros 132 valores son Pose)
+        # Esto evita que la visibilidad se corrompa con el ruido
+        aug_seq_1 = seq + noise_1
+        aug_seq_1[:, 3::4] = seq[:, 3::4] # Restaura los valores de visibilidad originales
+        aug_sequences.append(aug_seq_1)
         aug_labels.append(label)
 
-        # 3. Ruido moderado (pero menor que antes)
-        noise_2 = np.random.normal(0, 0.010, seq.shape)
-        aug_sequences.append(seq + noise_2)
+        # 3. RUIDO LIGERO (Simula imperfección humana al hacer la seña)
+        noise_2 = np.random.normal(0, 0.004, seq.shape)
+        aug_seq_2 = seq + noise_2
+        aug_seq_2[:, 3::4] = seq[:, 3::4] # Restaura los valores de visibilidad originales
+        aug_sequences.append(aug_seq_2)
         aug_labels.append(label)
+        
+    return aug_sequences, aug_labels
         
     return aug_sequences, aug_labels
 
@@ -62,11 +89,10 @@ def build_model():
     model = Sequential([
  
         # Masking ignora los frames con 0s, los cuales se han utilizado para rellenar y estandarizar todas las secuencias con la misma longitud
-        # interpolar, ver como hacerlo
         Masking(mask_value=0.0, input_shape=(MAX_FRAMES, LENGTH_KEYPOINTS)),
         
         # SpatialDropout apaga canales enteros (ej. "ciega" a la red de la coordenada Z por un rato; ignora la profundidad)
-        SpatialDropout1D(0.3), 
+        SpatialDropout1D(0.2), 
         
         # Cambiamos a LSTM Bidireccional y aplicamos castigo L2
 
@@ -90,7 +116,7 @@ def build_model():
         # características lógicas simples.
         # - Dense softmax: Capa de salida con activación softmax para clasificación multiclase. Convierte las salidas anteriores en probabilidades
 
-        Dense(16, activation='relu', kernel_regularizer=l2(0.001)),
+        Dense(32, activation='relu', kernel_regularizer=l2(0.001)),
         Dense(len(WORDS), activation='softmax')
     ])
     
@@ -168,7 +194,7 @@ if __name__ == "__main__":
         X_train, y_train,
         validation_data=(X_val, y_val),
         epochs=150,
-        batch_size=16,
+        batch_size=32,
         callbacks=[early_stop, checkpoint, reduce_lr]
     )
 
