@@ -22,6 +22,7 @@ DATA_PATH = os.path.join(ROOT_PATH, "data_h5")
 MODEL_FOLDER_PATH = os.path.join(ROOT_PATH, "models")
 METRICS_FOLDER = os.path.join(ROOT_PATH, "metricas_modelo")
 MODEL_PATH = os.path.join(MODEL_FOLDER_PATH, "modelo_señas_lstm.keras")
+VIDEOS_FOLDER = os.path.join(ROOT_PATH, "videos")
 
 # DICCIONARIO DE PALABRAS
 WORDS = ["hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate", "nada"] # Agrega aquí todas tus palabras
