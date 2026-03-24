@@ -26,6 +26,11 @@ modeloTutorial/frame_actions/
 modeloTutorial/data/keypoints/*.h5
 modeloTutorialFtGemini/data_h5/*.h5
 modeloTutorialFtGemini/data_h5_v1/*.h5
+modeloTutorialFtGemini/data_h5_v2/*.h5
+modeloTutorialFtGemini/data_unir/*.h5
+
+# videos
+modeloTutorialFtGemini/videos/
 
 # ─────────────────────────────────────────
 #  Modelos entrenados
