@@ -16,6 +16,14 @@ SELECTED_FACE_INDICES = [
 # 33*4 (pose) + 16*3 (cara seleccionada) + 21*3 (lh) + 21*3 (rh)
 LENGTH_KEYPOINTS = 306
 
+# CAPTURE TIMING SETTINGS (seconds)
+# PRE_RECORD_COUNTDOWN_SECONDS: visual wait time before recording starts.
+# RECORD_DURATION_SECONDS: fixed duration for each video before auto-stop.
+# DISPLAY_TIMER_DECIMALS: precision for timers shown on screen.
+PRE_RECORD_COUNTDOWN_SECONDS = 5
+RECORD_DURATION_SECONDS = 3.0
+DISPLAY_TIMER_DECIMALS = 1
+
 # PATHS
 ROOT_PATH = os.getcwd()
 DATA_PATH = os.path.join(ROOT_PATH, "data_h5")
