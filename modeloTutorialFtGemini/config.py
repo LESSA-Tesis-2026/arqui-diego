@@ -20,9 +20,9 @@ LENGTH_KEYPOINTS = 306
 # PRE_RECORD_COUNTDOWN_SECONDS: visual wait time before recording starts.
 # RECORD_DURATION_SECONDS: fixed duration for each video before auto-stop.
 # DISPLAY_TIMER_DECIMALS: precision for timers shown on screen.
-PRE_RECORD_COUNTDOWN_SECONDS = 5
+PRE_RECORD_COUNTDOWN_SECONDS = 3
 RECORD_DURATION_SECONDS = 3.0
-DISPLAY_TIMER_DECIMALS = 1
+DISPLAY_TIMER_DECIMALS = 0
 
 # PATHS
 ROOT_PATH = os.getcwd()

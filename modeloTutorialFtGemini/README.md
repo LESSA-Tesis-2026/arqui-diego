@@ -165,6 +165,38 @@ pip install -r requirements.txt
 
 Important: scripts use `ROOT_PATH = os.getcwd()`, so run commands from this folder to keep paths correct.
 
+## Alternative setup with `uv` (recommended for speed)
+If you use `uv`, you can install and manage Python + virtual environments quickly.
+
+From this folder root (`modeloTutorialFtGemini`):
+
+```bash
+uv python install 3.11
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install -r requirements.txt
+```
+
+If `uv` prints a PATH warning such as:
+`~/.local/bin is not on your PATH`, run:
+
+```bash
+uv python update-shell
+```
+
+Or add this to `~/.zshrc` manually:
+
+```bash
+export PATH="/Users/fernandofigueroa/.local/bin:$PATH"
+source ~/.zshrc
+```
+
+To exit the virtual environment:
+
+```bash
+deactivate
+```
+
 ---
 
 ## 6) How to run each phase

@@ -98,7 +98,7 @@ def _render_status_overlay(image, word: str, sample_idx: int, target_samples: in
     cv2.putText(image, message, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
 
-def capture_videos(word, target_samples=80):
+def capture_videos(word, target_samples=100):
     """Capture videos per word with pre-start countdown and fixed auto-stop.
 
     Per-sample flow:
@@ -219,7 +219,7 @@ def capture_videos(word, target_samples=80):
 
 
 if __name__ == "__main__":
-    META_MUESTRAS = 10
+    META_MUESTRAS = 100
     create_video_folders()
     for word in WORDS:
         capture_videos(word, target_samples=META_MUESTRAS)
