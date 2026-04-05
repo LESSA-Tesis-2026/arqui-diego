@@ -56,8 +56,32 @@ def create_video_folders():
 
 
 def _format_seconds(value: float) -> str:
-    """Format seconds based on configured UI precision."""
-    return f"{value:.{DISPLAY_TIMER_DECIMALS}f}"
+    """Format seconds for UI using integer seconds."""
+    return str(max(0, int(round(value))))
+
+
+def _format_seconds_decimal(value: float, decimals: int = 1) -> str:
+    """Format seconds for UI using decimal precision."""
+    return f"{max(0.0, value):.{decimals}f}"
+
+
+def _draw_state_border(image, phase: str):
+    """Draw a frame border with a color that matches capture state.
+
+    Colors:
+        - IDLE: gray
+        - COUNTDOWN: yellow
+        - RECORDING: red
+    """
+    height, width = image.shape[:2]
+    if phase == "RECORDING":
+        color = (0, 0, 255)  # red
+    elif phase == "COUNTDOWN":
+        color = (0, 255, 255)  # yellow
+    else:
+        color = (160, 160, 160)  # gray
+
+    cv2.rectangle(image, (0, 0), (width - 1, height - 1), color, 6)
 
 
 def _render_status_overlay(image, word: str, sample_idx: int, target_samples: int, phase: str, elapsed: float = 0.0):
@@ -89,7 +113,10 @@ def _render_status_overlay(image, word: str, sample_idx: int, target_samples: in
         message = f"Starts in {_format_seconds(remaining)}s"
         color = (0, 255, 255)
     elif phase == "RECORDING":
-        message = f"RECORDING {_format_seconds(elapsed)}/{_format_seconds(RECORD_DURATION_SECONDS)}s"
+        message = (
+            f"RECORDING {_format_seconds_decimal(elapsed)}/"
+            f"{_format_seconds_decimal(RECORD_DURATION_SECONDS)}s"
+        )
         color = (0, 0, 255)
     else:
         message = "Unknown state"
@@ -163,6 +190,7 @@ def capture_videos(word, target_samples=100):
                 image, results = mediapipe_detection(frame, holistic)
                 draw_custom_keypoints(image, results)
                 now = time.perf_counter()
+                _draw_state_border(image, phase)
 
                 # Use a monotonic clock to avoid drift from system clock adjustments.
                 if phase == "COUNTDOWN":

@@ -58,7 +58,6 @@ Shared config and reusable helpers across scripts:
 - New capture timing controls:
   - `PRE_RECORD_COUNTDOWN_SECONDS`
   - `RECORD_DURATION_SECONDS`
-  - `DISPLAY_TIMER_DECIMALS`
 - MediaPipe utility functions:
   - `mediapipe_detection(image, model)`
   - `extract_keypoints(results)`
