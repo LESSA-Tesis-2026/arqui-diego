@@ -75,6 +75,13 @@ Key points:
 - Raw frames are saved (without drawn overlays)
 - `q` exits cleanly from any state
 - For class `"nada"`, target samples are increased (`x1.75`)
+- Uses `capture_utils/` for reusable planning and UI helpers
+
+### `capture_utils/`
+Small helper package used by the video-capture flow:
+- Gap-aware sample planning (`build_capture_plan`) to fill missing IDs first
+- Per-word folder creation (`create_video_folders`)
+- Capture UI helpers (state border, status overlays, time formatting)
 
 ### `1b_procesar_videos_h5.py`
 Batch-processing script that:

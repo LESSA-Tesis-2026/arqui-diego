@@ -1,7 +1,6 @@
 import os
 import cv2
 import numpy as np
-import mediapipe as mp
 
 # SETTINGS
 MAX_FRAMES = 60 # Longitud máxima para el padding (puede ajustare si se hacen señas muy largas)
@@ -19,7 +18,7 @@ LENGTH_KEYPOINTS = 306
 # CAPTURE TIMING SETTINGS (seconds)
 # PRE_RECORD_COUNTDOWN_SECONDS: visual wait time before recording starts.
 # RECORD_DURATION_SECONDS: fixed duration for each video before auto-stop.
-PRE_RECORD_COUNTDOWN_SECONDS = 3
+PRE_RECORD_COUNTDOWN_SECONDS = 2
 RECORD_DURATION_SECONDS = 3.0
 
 # PATHS

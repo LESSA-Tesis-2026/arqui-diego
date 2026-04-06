@@ -5,6 +5,13 @@ import cv2
 import mediapipe as mp
 
 from config import *
+from capture_utils import (
+    build_capture_plan,
+    create_video_folders,
+    draw_state_border,
+    format_seconds,
+    render_status_overlay,
+)
 
 
 def draw_custom_keypoints(image, results):
@@ -45,86 +52,6 @@ def draw_custom_keypoints(image, results):
         )
 
 
-def create_video_folders():
-    """Create output folders per word if they do not exist."""
-    if not os.path.exists(VIDEOS_FOLDER):
-        os.makedirs(VIDEOS_FOLDER)
-    for word in WORDS:
-        word_path = os.path.join(VIDEOS_FOLDER, word)
-        if not os.path.exists(word_path):
-            os.makedirs(word_path)
-
-
-def _format_seconds(value: float) -> str:
-    """Format seconds for UI using integer seconds."""
-    return str(max(0, int(round(value))))
-
-
-def _format_seconds_decimal(value: float, decimals: int = 1) -> str:
-    """Format seconds for UI using decimal precision."""
-    return f"{max(0.0, value):.{decimals}f}"
-
-
-def _draw_state_border(image, phase: str):
-    """Draw a frame border with a color that matches capture state.
-
-    Colors:
-        - IDLE: gray
-        - COUNTDOWN: yellow
-        - RECORDING: red
-    """
-    height, width = image.shape[:2]
-    if phase == "RECORDING":
-        color = (0, 0, 255)  # red
-    elif phase == "COUNTDOWN":
-        color = (0, 255, 255)  # yellow
-    else:
-        color = (160, 160, 160)  # gray
-
-    cv2.rectangle(image, (0, 0), (width - 1, height - 1), color, 6)
-
-
-def _render_status_overlay(image, word: str, sample_idx: int, target_samples: int, phase: str, elapsed: float = 0.0):
-    """Render status text for each capture phase.
-
-    Args:
-        image: Frame shown on screen.
-        word: Current word label.
-        sample_idx: Sample index (0-based).
-        target_samples: Total video target for the word.
-        phase: Current state-machine phase.
-        elapsed: Elapsed time in the current phase.
-    """
-    cv2.putText(
-        image,
-        f"Palabra: {word} | Video: {sample_idx + 1}/{target_samples}",
-        (10, 30),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
-        (255, 0, 0),
-        2,
-    )
-
-    if phase == "IDLE":
-        message = "Press 'r' to start capture"
-        color = (0, 255, 0)
-    elif phase == "COUNTDOWN":
-        remaining = max(0.0, PRE_RECORD_COUNTDOWN_SECONDS - elapsed)
-        message = f"Starts in {_format_seconds(remaining)}s"
-        color = (0, 255, 255)
-    elif phase == "RECORDING":
-        message = (
-            f"RECORDING {_format_seconds_decimal(elapsed)}/"
-            f"{_format_seconds_decimal(RECORD_DURATION_SECONDS)}s"
-        )
-        color = (0, 0, 255)
-    else:
-        message = "Unknown state"
-        color = (255, 255, 255)
-
-    cv2.putText(image, message, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-
-
 def capture_videos(word, target_samples=100):
     """Capture videos per word with pre-start countdown and fixed auto-stop.
 
@@ -148,15 +75,20 @@ def capture_videos(word, target_samples=100):
         print(f"\n[INFO] 'nada' class detected. Target adjusted to {target_samples} videos.")
 
     word_folder = os.path.join(VIDEOS_FOLDER, word)
-    existing_videos = len([f for f in os.listdir(word_folder) if f.endswith(".avi")])
+    planned_indices, extra_indices = build_capture_plan(word_folder, target_samples)
+    completed_videos = target_samples - len(planned_indices)
 
-    if existing_videos >= target_samples:
-        print(f"[*] Word '{word.upper()}' already has {existing_videos} videos. Skipping...")
+    if not planned_indices:
+        print(f"[*] Word '{word.upper()}' is complete ({completed_videos}/{target_samples}). Skipping...")
+        if extra_indices:
+            print(f"[*] Found extra indices outside target range: {extra_indices}")
         return
 
-    samples_to_record = target_samples - existing_videos
     print(f"\n--- COLLECTING VIDEOS FOR: {word.upper()} ---")
-    print(f"Existing videos: {existing_videos} | Remaining: {samples_to_record}")
+    print(f"Valid in-range videos: {completed_videos}/{target_samples}")
+    print(f"Missing indices to capture: {planned_indices}")
+    if extra_indices:
+        print(f"Extra indices (not counted toward target): {extra_indices}")
 
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -170,12 +102,12 @@ def capture_videos(word, target_samples=100):
 
     mp_holistic = mp.solutions.holistic
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-        for i in range(samples_to_record):
-            current_sample_idx = existing_videos + i
+        for capture_order, current_sample_idx in enumerate(planned_indices, start=1):
             phase = "IDLE"
             phase_start_ts = 0.0
             recording_start_ts = 0.0
             out = None
+            progress_idx = capture_order - 1
 
             while True:
                 ret, frame = cap.read()
@@ -190,7 +122,7 @@ def capture_videos(word, target_samples=100):
                 image, results = mediapipe_detection(frame, holistic)
                 draw_custom_keypoints(image, results)
                 now = time.perf_counter()
-                _draw_state_border(image, phase)
+                draw_state_border(image, phase)
 
                 # Use a monotonic clock to avoid drift from system clock adjustments.
                 if phase == "COUNTDOWN":
@@ -200,10 +132,26 @@ def capture_videos(word, target_samples=100):
                         out = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
                         phase = "RECORDING"
                         recording_start_ts = now
-                        _render_status_overlay(image, word, current_sample_idx, target_samples, phase, 0.0)
+                        render_status_overlay(
+                            image,
+                            word,
+                            progress_idx,
+                            len(planned_indices),
+                            phase,
+                            PRE_RECORD_COUNTDOWN_SECONDS,
+                            RECORD_DURATION_SECONDS,
+                            0.0,
+                        )
                     else:
-                        _render_status_overlay(
-                            image, word, current_sample_idx, target_samples, phase, countdown_elapsed
+                        render_status_overlay(
+                            image,
+                            word,
+                            progress_idx,
+                            len(planned_indices),
+                            phase,
+                            PRE_RECORD_COUNTDOWN_SECONDS,
+                            RECORD_DURATION_SECONDS,
+                            countdown_elapsed,
                         )
 
                 elif phase == "RECORDING":
@@ -211,8 +159,15 @@ def capture_videos(word, target_samples=100):
 
                     # Save raw frames to avoid contaminating the output video with overlays/landmarks.
                     out.write(frame)
-                    _render_status_overlay(
-                        image, word, current_sample_idx, target_samples, phase, recording_elapsed
+                    render_status_overlay(
+                        image,
+                        word,
+                        progress_idx,
+                        len(planned_indices),
+                        phase,
+                        PRE_RECORD_COUNTDOWN_SECONDS,
+                        RECORD_DURATION_SECONDS,
+                        recording_elapsed,
                     )
 
                     if recording_elapsed >= RECORD_DURATION_SECONDS:
@@ -220,12 +175,21 @@ def capture_videos(word, target_samples=100):
                         out = None
                         print(
                             f"Video {current_sample_idx + 1} saved successfully "
-                            f"({_format_seconds(RECORD_DURATION_SECONDS)}s)."
+                            f"({format_seconds(RECORD_DURATION_SECONDS)}s)."
                         )
                         break
 
                 else:  # IDLE
-                    _render_status_overlay(image, word, current_sample_idx, target_samples, phase, 0.0)
+                    render_status_overlay(
+                        image,
+                        word,
+                        capture_order - 1,
+                        len(planned_indices),
+                        phase,
+                        PRE_RECORD_COUNTDOWN_SECONDS,
+                        RECORD_DURATION_SECONDS,
+                        0.0,
+                    )
 
                 cv2.imshow("Captura de Videos de LESSA", image)
                 key = cv2.waitKey(10) & 0xFF
@@ -248,6 +212,6 @@ def capture_videos(word, target_samples=100):
 
 if __name__ == "__main__":
     META_MUESTRAS = 100
-    create_video_folders()
+    create_video_folders(VIDEOS_FOLDER, WORDS)
     for word in WORDS:
         capture_videos(word, target_samples=META_MUESTRAS)
