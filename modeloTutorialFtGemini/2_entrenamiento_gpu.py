@@ -75,7 +75,13 @@ def load_raw_data_from_h5():
         
         with h5py.File(file_path, 'r') as hf:
             for key in hf.keys():
-                seq = np.array(hf[key])
+                seq = np.array(hf[key], dtype=np.float32)
+                if seq.ndim != 2 or seq.shape[1] != LENGTH_KEYPOINTS:
+                    raise ValueError(
+                        f"Feature shape mismatch in '{file_path}' -> dataset '{key}': "
+                        f"got {seq.shape}, expected (*, {LENGTH_KEYPOINTS}). "
+                        "Rebuild your .h5 data after changing temporal feature settings."
+                    )
                 sequences.append(seq)
                 labels.append(label)
                 
@@ -127,7 +133,7 @@ def build_model():
     )
     return model
 
-def plot_metrics(history, y_true, y_pred_classes):
+def plot_metrics(history, y_true, y_pred_classes, labels, label_names):
     create_folder_if_not_exists(METRICS_FOLDER)
     
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
@@ -143,11 +149,13 @@ def plot_metrics(history, y_true, y_pred_classes):
     plt.savefig(os.path.join(METRICS_FOLDER, 'training_history.png'))
     plt.close()
 
-    cm = confusion_matrix(y_true, y_pred_classes)
-    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    cm = confusion_matrix(y_true, y_pred_classes, labels=labels)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        cm_normalized = cm.astype("float") / cm.sum(axis=1, keepdims=True)
+    cm_normalized = np.nan_to_num(cm_normalized)
     
     plt.figure(figsize=(10, 8))
-    sns.heatmap(cm_normalized, annot=True, fmt='.2f', cmap='Blues', xticklabels=WORDS, yticklabels=WORDS)
+    sns.heatmap(cm_normalized, annot=True, fmt='.2f', cmap='Blues', xticklabels=label_names, yticklabels=label_names)
     plt.title('Matriz de Confusión Normalizada')
     plt.ylabel('Valor Real')
     plt.xlabel('Predicción')
@@ -199,11 +207,19 @@ if __name__ == "__main__":
     y_pred = model.predict(X_val)
     y_pred_classes = np.argmax(y_pred, axis=1)
     y_true = np.argmax(y_val, axis=1)
+    present_labels = np.unique(np.concatenate([y_true, y_pred_classes]))
+    present_word_names = [WORDS[label] for label in present_labels]
 
     print("\n--- REPORTE DE CLASIFICACIÓN ---")
-    print(classification_report(y_true, y_pred_classes, target_names=WORDS))
+    print(classification_report(
+        y_true,
+        y_pred_classes,
+        labels=present_labels,
+        target_names=present_word_names,
+        zero_division=0,
+    ))
 
-    plot_metrics(history, y_true, y_pred_classes)
+    plot_metrics(history, y_true, y_pred_classes, present_labels, present_word_names)
 
 # si se extiende el modelo, hay q utilizar normalizacion con "LayerNormalization"
 #Cuando se escale a un modelo mas grande tomar en consideracion el agregar las siguientes capas:

@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+from utils import get_feature_length
 
 # SETTINGS
 MAX_FRAMES = 60 # Longitud máxima para el padding (puede ajustare si se hacen señas muy largas)
@@ -12,14 +13,24 @@ SELECTED_FACE_INDICES = [
     70, 63, 105, 336, 296, 334   # Cejas
 ]
 
-# 33*4 (pose) + 16*3 (cara seleccionada) + 21*3 (lh) + 21*3 (rh)
-LENGTH_KEYPOINTS = 306
+# 33*4 (pose) + 16*3 (selected face) + 21*3 (lh) + 21*3 (rh)
+BASE_LENGTH_KEYPOINTS = 306
+
+# Toggle to include first-order temporal deltas:
+# final feature vector becomes [positions, deltas].
+USE_TEMPORAL_FEATURES = True
+
+# Final per-frame feature length used by training/inference.
+LENGTH_KEYPOINTS = get_feature_length(BASE_LENGTH_KEYPOINTS, USE_TEMPORAL_FEATURES)
 
 # CAPTURE TIMING SETTINGS (seconds)
 # PRE_RECORD_COUNTDOWN_SECONDS: visual wait time before recording starts.
 # RECORD_DURATION_SECONDS: fixed duration for each video before auto-stop.
-PRE_RECORD_COUNTDOWN_SECONDS = 2
-RECORD_DURATION_SECONDS = 3.0
+# AUTO_STOP_RECORDING: if True, recording stops automatically after
+# RECORD_DURATION_SECONDS. If False, recording stops manually with 's'.
+PRE_RECORD_COUNTDOWN_SECONDS = 1
+RECORD_DURATION_SECONDS = 2.5
+AUTO_STOP_RECORDING = True
 
 # PATHS
 ROOT_PATH = os.getcwd()

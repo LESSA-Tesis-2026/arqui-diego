@@ -95,6 +95,7 @@ def render_status_overlay(
     phase: str,
     countdown_seconds: float,
     record_duration_seconds: float,
+    auto_stop_recording: bool,
     elapsed: float = 0.0,
 ):
     """Render status text for each capture phase.
@@ -107,6 +108,7 @@ def render_status_overlay(
         phase: Current state-machine phase.
         countdown_seconds: Countdown length before recording starts.
         record_duration_seconds: Target duration for recording phase.
+        auto_stop_recording: Whether recording is auto-stopped by duration.
         elapsed: Elapsed time in the current phase.
     """
     cv2.putText(
@@ -127,11 +129,16 @@ def render_status_overlay(
         message = f"Starts in {format_seconds(remaining)}s"
         color = (0, 255, 255)
     elif phase == "RECORDING":
-        message = f"RECORDING {format_seconds_decimal(elapsed)}/{format_seconds_decimal(record_duration_seconds)}s"
+        if auto_stop_recording:
+            message = (
+                f"RECORDING {format_seconds_decimal(elapsed)}/"
+                f"{format_seconds_decimal(record_duration_seconds)}s"
+            )
+        else:
+            message = f"RECORDING {format_seconds_decimal(elapsed)}s (press 'r' to stop)"
         color = (0, 0, 255)
     else:
         message = "Unknown state"
         color = (255, 255, 255)
 
     cv2.putText(image, message, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-

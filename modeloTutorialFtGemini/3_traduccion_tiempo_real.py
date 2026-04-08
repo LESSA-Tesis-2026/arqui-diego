@@ -5,6 +5,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import collections
 from config import *
+from utils import build_frame_features
 
 def draw_keypoints(image, results):
     # Usamos la función de dibujo estándar de MediaPipe para la interfaz
@@ -29,6 +30,7 @@ def real_time_translation(threshold=0.75):
     # 2. ESTRUCTURAS DE DATOS CONTINUAS
     sequence = collections.deque(maxlen=WINDOW_SIZE)
     predictions_buffer = collections.deque(maxlen=VOTING_BUFFER_SIZE)
+    prev_position = None
     
     # 3. MÁQUINA DE ESTADOS
     sentence = []
@@ -49,11 +51,15 @@ def real_time_translation(threshold=0.75):
             # --- FASE 1: EXTRACCIÓN Y VENTANA DESLIZANTE ---
             if results.left_hand_landmarks or results.right_hand_landmarks:
                 # Utilizamos la función de config.py que ya calcula coordenadas relativas a la nariz
-                keypoints = extract_keypoints(results)
-                sequence.append(keypoints)
+                position_keypoints = extract_keypoints(results)
             else:
                 # Si las manos salen de cámara, inyectamos ceros para mantener el flujo de tiempo real
-                sequence.append(np.zeros(LENGTH_KEYPOINTS))
+                position_keypoints = np.zeros(BASE_LENGTH_KEYPOINTS, dtype=np.float32)
+
+            frame_features, prev_position = build_frame_features(
+                position_keypoints, prev_position, USE_TEMPORAL_FEATURES
+            )
+            sequence.append(frame_features)
             
             # --- FASE 2: PREDICCIÓN CONTINUA ---
             if len(sequence) == WINDOW_SIZE:

@@ -55,6 +55,9 @@ Shared config and reusable helpers across scripts:
 - Global paths (`DATA_PATH`, `VIDEOS_FOLDER`, `MODEL_PATH`, etc.)
 - Vocabulary (`WORDS`)
 - Sequence dimensions (`MAX_FRAMES`, `LENGTH_KEYPOINTS`)
+- Temporal-feature toggle:
+  - `USE_TEMPORAL_FEATURES = True/False`
+  - If enabled, per-frame features become `[positions, deltas]`
 - New capture timing controls:
   - `PRE_RECORD_COUNTDOWN_SECONDS`
   - `RECORD_DURATION_SECONDS`
@@ -75,12 +78,13 @@ Key points:
 - Raw frames are saved (without drawn overlays)
 - `q` exits cleanly from any state
 - For class `"nada"`, target samples are increased (`x1.75`)
-- Uses `capture_utils/` for reusable planning and UI helpers
+- Uses `utils/` for reusable planning, temporal, and UI helpers
 
-### `capture_utils/`
-Small helper package used by the video-capture flow:
+### `utils/`
+Small helper package shared by capture, extraction, training, and inference:
 - Gap-aware sample planning (`build_capture_plan`) to fill missing IDs first
 - Per-word folder creation (`create_video_folders`)
+- Temporal feature utilities (`get_feature_length`, `add_temporal_features_to_sequence`, `build_frame_features`)
 - Capture UI helpers (state border, status overlays, time formatting)
 
 ### `1b_procesar_videos_h5.py`
@@ -215,6 +219,10 @@ Edit `config.py`:
   - `PRE_RECORD_COUNTDOWN_SECONDS`
   - `RECORD_DURATION_SECONDS`
   - `MODEL_PATH` if needed
+  - `USE_TEMPORAL_FEATURES` if you want to enable/disable deltas
+
+Important: if you change `USE_TEMPORAL_FEATURES`, rebuild `.h5` datasets before training
+to keep feature dimensions consistent.
 
 ## Phase 1A (video-first): Capture videos
 ```bash

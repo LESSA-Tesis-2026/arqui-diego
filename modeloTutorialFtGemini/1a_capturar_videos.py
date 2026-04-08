@@ -5,7 +5,7 @@ import cv2
 import mediapipe as mp
 
 from config import *
-from capture_utils import (
+from utils import (
     build_capture_plan,
     create_video_folders,
     draw_state_border,
@@ -53,22 +53,22 @@ def draw_custom_keypoints(image, results):
 
 
 def capture_videos(word, target_samples=100):
-    """Capture videos per word with pre-start countdown and fixed auto-stop.
+    """Capture videos per word with pre-start countdown and configurable stop mode.
 
     Per-sample flow:
     1. `IDLE`: waits for `r` key.
     2. `COUNTDOWN`: shows configurable countdown.
-    3. `RECORDING`: records video and stops automatically at target duration.
+    3. `RECORDING`: records video and stops either automatically or manually.
 
     Args:
         word: Word label to capture.
         target_samples: Total target number of videos for the word.
 
     Raises:
-        ValueError: If configured recording duration is invalid (<= 0).
+        ValueError: If auto-stop mode is enabled and duration is invalid (<= 0).
     """
-    if RECORD_DURATION_SECONDS <= 0:
-        raise ValueError("RECORD_DURATION_SECONDS must be greater than 0.")
+    if AUTO_STOP_RECORDING and RECORD_DURATION_SECONDS <= 0:
+        raise ValueError("RECORD_DURATION_SECONDS must be greater than 0 in auto-stop mode.")
 
     if word.lower() == "nada":
         target_samples = int(target_samples * 1.75)
@@ -140,6 +140,7 @@ def capture_videos(word, target_samples=100):
                             phase,
                             PRE_RECORD_COUNTDOWN_SECONDS,
                             RECORD_DURATION_SECONDS,
+                            AUTO_STOP_RECORDING,
                             0.0,
                         )
                     else:
@@ -151,6 +152,7 @@ def capture_videos(word, target_samples=100):
                             phase,
                             PRE_RECORD_COUNTDOWN_SECONDS,
                             RECORD_DURATION_SECONDS,
+                            AUTO_STOP_RECORDING,
                             countdown_elapsed,
                         )
 
@@ -167,10 +169,11 @@ def capture_videos(word, target_samples=100):
                         phase,
                         PRE_RECORD_COUNTDOWN_SECONDS,
                         RECORD_DURATION_SECONDS,
+                        AUTO_STOP_RECORDING,
                         recording_elapsed,
                     )
 
-                    if recording_elapsed >= RECORD_DURATION_SECONDS:
+                    if AUTO_STOP_RECORDING and recording_elapsed >= RECORD_DURATION_SECONDS:
                         out.release()
                         out = None
                         print(
@@ -188,6 +191,7 @@ def capture_videos(word, target_samples=100):
                         phase,
                         PRE_RECORD_COUNTDOWN_SECONDS,
                         RECORD_DURATION_SECONDS,
+                        AUTO_STOP_RECORDING,
                         0.0,
                     )
 
@@ -201,6 +205,15 @@ def capture_videos(word, target_samples=100):
                     cap.release()
                     cv2.destroyAllWindows()
                     return
+
+                if key == ord("r") and phase == "RECORDING" and out is not None and not AUTO_STOP_RECORDING:
+                    out.release()
+                    out = None
+                    print(
+                        f"Video {current_sample_idx + 1} saved successfully "
+                        f"(manual stop at {format_seconds(recording_elapsed)}s)."
+                    )
+                    break
 
                 if key == ord("r") and phase == "IDLE":
                     phase = "COUNTDOWN"

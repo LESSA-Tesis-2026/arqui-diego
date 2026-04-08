@@ -1,4 +1,4 @@
-"""Reusable helpers for the video-capture pipeline."""
+"""Reusable helper utilities for capture and temporal features."""
 
 from .capture_helpers import (
     build_capture_plan,
@@ -8,6 +8,11 @@ from .capture_helpers import (
     format_seconds_decimal,
     render_status_overlay,
 )
+from .temporal_features import (
+    add_temporal_features_to_sequence,
+    build_frame_features,
+    get_feature_length,
+)
 
 __all__ = [
     "build_capture_plan",
@@ -16,5 +21,8 @@ __all__ = [
     "format_seconds",
     "format_seconds_decimal",
     "render_status_overlay",
+    "add_temporal_features_to_sequence",
+    "build_frame_features",
+    "get_feature_length",
 ]
 
