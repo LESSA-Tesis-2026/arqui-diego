@@ -3,6 +3,9 @@ import re
 
 import cv2
 
+# Thickness in pixels for the IDLE / COUNTDOWN / RECORDING state frame in the capture preview.
+STATE_BORDER_THICKNESS_PX = 14
+
 
 def create_video_folders(videos_folder: str, words: list[str]):
     """Create output folders per word if they do not exist.
@@ -84,7 +87,13 @@ def draw_state_border(image, phase: str):
     else:
         color = (160, 160, 160)  # gray
 
-    cv2.rectangle(image, (0, 0), (width - 1, height - 1), color, 6)
+    cv2.rectangle(
+        image,
+        (0, 0),
+        (width - 1, height - 1),
+        color,
+        STATE_BORDER_THICKNESS_PX,
+    )
 
 
 def render_status_overlay(
