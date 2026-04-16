@@ -114,7 +114,7 @@ def capture_videos(word, target_samples=80):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    META_MUESTRAS = 10 
+    META_MUESTRAS = 80 
     create_video_folders()
     for word in WORDS:
         capture_videos(word, target_samples=META_MUESTRAS)
