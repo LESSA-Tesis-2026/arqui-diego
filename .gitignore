@@ -15,6 +15,10 @@ venv/
 env/
 .env/
 ENV/
+venv_wsl/
+.venv_wsl/
+env_wsl/
+.env_wsl/
 
 # ─────────────────────────────────────────
 #  Datos de entrenamiento (archivos grandes)
@@ -46,6 +50,9 @@ modeloTutorialFtGemini/modelo2/*.png
 modeloTutorialFtGemini/modelo3/*.keras
 modeloTutorialFtGemini/modelo3/*.h5
 modeloTutorialFtGemini/modelo3/*.png
+modeloTutorialFtGemini/modelo1_delta/*.keras
+modeloTutorialFtGemini/modelo1_delta/*.h5
+modeloTutorialFtGemini/modelo1_delta/*.png
 
 # ─────────────────────────────────────────
 #  Métricas y gráficas generadas
