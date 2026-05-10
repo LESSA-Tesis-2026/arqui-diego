@@ -25,7 +25,7 @@ MODEL_PATH = os.path.join(MODEL_FOLDER_PATH, "modelo_señas_lstm.keras")
 VIDEOS_FOLDER = os.path.join(ROOT_PATH, "videos")
 
 # DICCIONARIO DE PALABRAS
-WORDS = ["hola", "buenos_dias", "gracias", "mi_nombre_es", "cuidate", "buenas tardes", "buenas noches", "como estas", "cual es tu nombre", "permiso", "adios", "perdon"] 
+WORDS = ["hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate", "nada", "buenas tardes", "buenas noches", "como estas", "cual es tu nombre", "permiso", "adios", "perdon", "otra vez", "por favor", "duda", "nos vemos luego", "por que", "si", "no", "talvez", "no se"] 
 
 # ["hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate", "nada", "buenas tardes", "buenas noches", "como estas", "cual es tu nombre", "permiso", "adios", "perdon", "otra vez", "por favor", "duda", "nos vemos luego", "por que", "si", "no", "talvez", "no se"]
 

@@ -21,9 +21,9 @@ def real_time_translation(threshold=0.65):
     model = load_model(MODEL_PATH)
     mp_holistic = mp.solutions.holistic
     
-    WINDOW_SIZE = 40           
-    VOTING_BUFFER_SIZE = 15    
-    MIN_VOTES = 10             
+    WINDOW_SIZE = 25           
+    VOTING_BUFFER_SIZE = 10    
+    MIN_VOTES = 7             
     
     sequence = collections.deque(maxlen=WINDOW_SIZE)
     predictions_buffer = collections.deque(maxlen=VOTING_BUFFER_SIZE)
