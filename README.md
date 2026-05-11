@@ -1,15 +1,14 @@
 # LESSA Translation
 
-Web application for live LESSA-to-Spanish translation. The project is split into a browser experience, a FastAPI model-serving backend, shared development documentation, and Docker orchestration for running the stack locally.
+Web application for live LESSA-to-Spanish translation. The project combines a research/modeling workspace, a FastAPI model-serving backend, a browser translation experience, shared documentation, and Docker orchestration for local runtime.
 
 ## Parts
 
 - `apps/web`: Next.js frontend. It owns camera access, user controls, live status, and Spanish translation output.
 - `apps/api`: FastAPI backend. It owns frame preprocessing, model loading, inference, stabilization, and the public API/WebSocket contract.
+- `modeloTutorialFtGemini`: research and model-development workspace. It contains the scripts used to capture samples, process datasets, train the model, evaluate results, and run the original real-time translation prototype. The production apps consume the trained `.keras` artifact from this workflow instead of importing these scripts directly.
 - `docs`: project-level documentation, including local development and Docker instructions.
 - `docker-compose.yml`: local full-stack runtime for the web app and API.
-- `openspec`: change proposals, specs, and task tracking for product changes.
-- `.agents`: reusable workflow guidance for agent-assisted development.
 
 ## How It Connects
 
@@ -19,7 +18,7 @@ The browser captures camera frames in `apps/web` and streams them to the API ove
 apps/web -> WS /api/v1/translate/stream -> apps/api
 ```
 
-The API decodes each frame, extracts hand/body landmarks, builds the model input sequence, runs the trained `.keras` model, and returns prediction updates to the browser. The frontend then renders recognition status, confidence, recent predictions, and the progressive Spanish text.
+The API decodes each frame, extracts hand/body landmarks, builds the model input sequence, runs the trained `.keras` model produced by the research workflow, and returns prediction updates to the browser. The frontend then renders recognition status, confidence, recent predictions, and the progressive Spanish text.
 
 The trained model is treated as a runtime artifact. It is not built by the web or API applications. For local Docker runs, Compose bind-mounts the artifact into the API container and sets `LESSA_MODEL_PATH` to the mounted path.
 
