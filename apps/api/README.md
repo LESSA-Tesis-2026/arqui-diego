@@ -12,15 +12,17 @@ FastAPI backend for serving the LESSA-to-Spanish translation model. This app own
 
 ## Environment
 
-Create or update `.env` from `.env.example`:
+`.env.example` is the tracked source of truth for backend configuration. Create a local `.env` from it when running the API outside Docker:
 
 ```bash
 cp .env.example .env
 ```
 
+`.env` is local-only and should not be committed. Docker does not use a second env example file; Docker-specific values are declared in the root `docker-compose.yml` so they stay next to the container mount that requires them.
+
 Important variables:
 
-- `LESSA_MODEL_PATH`: path to the `.keras` model artifact. Relative paths are resolved from `apps/api`.
+- `LESSA_MODEL_PATH`: path to the `.keras` model artifact. Relative paths are resolved from `apps/api`. In Docker, Compose sets this to `/models/modelo_senas_lstm.keras` and bind-mounts the research artifact there.
 - `LESSA_CORS_ORIGINS`: JSON list of allowed frontend origins.
 - `LESSA_SEQUENCE_LENGTH`: model sequence length. Current model expects `60`.
 - `LESSA_BASE_FEATURE_LENGTH`: position-only feature length. Current preprocessing uses `306`.

@@ -16,7 +16,7 @@ dependencies = [
     "pytest>=9.0.3",
     "python-multipart>=0.0.28",
     "tensorflow==2.15.0",
-    "tensorflow-macos==2.15.0",
+    "tensorflow-macos==2.15.0; sys_platform == 'darwin'",
     "uvicorn[standard]>=0.46.0",
 ]
 

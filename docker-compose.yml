@@ -1,0 +1,32 @@
+services:
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      LESSA_APP_NAME: "LESSA Translation API"
+      LESSA_API_PREFIX: "/api/v1"
+      LESSA_CORS_ORIGINS: '["http://localhost:3000"]'
+      LESSA_MODEL_PATH: "/models/modelo_senas_lstm.keras"
+      LESSA_SEQUENCE_LENGTH: "60"
+      LESSA_WINDOW_SIZE: "40"
+      LESSA_BASE_FEATURE_LENGTH: "306"
+      LESSA_USE_TEMPORAL_FEATURES: "true"
+      LESSA_CONFIDENCE_THRESHOLD: "0.75"
+      LESSA_VOTING_BUFFER_SIZE: "15"
+      LESSA_MIN_VOTES: "10"
+      LESSA_MAX_SENTENCE_WORDS: "12"
+      LESSA_PAUSE_RESET_FRAMES: "15"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./modeloTutorialFtGemini/models/modelo_señas_lstm.keras:/models/modelo_senas_lstm.keras:ro
+
+  web:
+    build:
+      context: ./apps/web
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api

@@ -13,15 +13,17 @@ Immersive browser experience for real-time LESSA-to-Spanish translation. The fro
 
 ## Environment
 
-Create or update `.env` from `.env.example`:
+`.env.example` is the tracked source of truth for frontend configuration. Create a local `.env` from it when running the web app outside Docker:
 
 ```bash
 cp .env.example .env
 ```
 
+`.env` is local-only and should not be committed. Docker does not use a second env example file; Docker-specific values are declared in the root `docker-compose.yml`.
+
 Variables:
 
-- `NEXT_PUBLIC_API_URL`: FastAPI backend URL. Defaults to `http://localhost:8000` for local development.
+- `NEXT_PUBLIC_API_URL`: FastAPI backend URL. Defaults to `http://localhost:8000` for local development and Docker because the browser reaches the API through the host-mapped port.
 
 ## Install
 
