@@ -239,7 +239,7 @@ if __name__ == "__main__":
     reduce_lr_factor = 0.5
     reduce_lr_patience = 10
     reduce_lr_min_lr = 0.00001
-    lstm_units = [128, 64]
+    lstm_units = [256, 128]
 
     early_stop = EarlyStopping(monitor='val_loss', patience=early_stop_patience, restore_best_weights=True)
     checkpoint = ModelCheckpoint(MODEL_PATH, monitor='val_accuracy', save_best_only=True)

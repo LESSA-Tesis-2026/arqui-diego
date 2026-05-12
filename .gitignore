@@ -55,6 +55,7 @@ modeloTutorialFtGemini/modelo3/*.png
 modeloTutorialFtGemini/modelo1_delta/*.keras
 modeloTutorialFtGemini/modelo1_delta/*.h5
 modeloTutorialFtGemini/modelo1_delta/*.png
+modeloTutorialFtGemini/modelo2_delta_full/*
 
 # ─────────────────────────────────────────
 #  Métricas y gráficas generadas
