@@ -26,6 +26,9 @@ env_wsl/
 # Frames capturados por cámara
 modeloTutorial/frame_actions/
 
+# Dataset alfabeto
+modeloAlfabeto/dataset_alfabeto/
+
 # Keypoints / datasets en HDF5
 modeloTutorial/data/keypoints/*.h5
 modeloTutorialFtGemini/data_h5/*.h5

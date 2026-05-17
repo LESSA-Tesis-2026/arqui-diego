@@ -56,7 +56,7 @@ def capture_images(letter, target_images=200, delay_seconds=0.1):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    META_IMAGENES = 300 # Recomendado para estáticos
+    META_IMAGENES = 5 # Recomendado para estáticos
     TIEMPO_ESPERA = 1.0 # Toma una foto cada 0.1 segundos
     
     create_folder_if_not_exists(DATASET_FOLDER)
