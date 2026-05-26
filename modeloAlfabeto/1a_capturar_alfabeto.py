@@ -96,6 +96,17 @@ def capture_images(letter, target_images=200, delay_seconds=0.1):
                     2,
                 )
 
+                remaining = max(0.0, delay_seconds - (time.time() - last_capture_time))
+                cv2.putText(
+                    display_frame,
+                    f"Siguiente captura en: {remaining:.1f}s",
+                    (10, 110),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 0, 255),
+                    2,
+                )
+
                 # Lógica del temporizador
                 if time.time() - last_capture_time > delay_seconds:
                     img_path = os.path.join(letter_folder, f"img_{current_idx}.jpg")
@@ -134,7 +145,7 @@ def capture_images(letter, target_images=200, delay_seconds=0.1):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    META_IMAGENES = 6 # Recomendado para estáticos
+    META_IMAGENES = 60 # Recomendado para estáticos
     TIEMPO_ESPERA = 1.0 # Toma una foto cada 0.1 segundos
     
     create_folder_if_not_exists(DATASET_FOLDER)
