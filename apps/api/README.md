@@ -25,8 +25,10 @@ Important variables:
 - `LESSA_MODEL_PATH`: path to the `.keras` model artifact. Relative paths are resolved from `apps/api`. In Docker, Compose sets this to `/models/modelo_senas_lstm.keras` and bind-mounts the research artifact there.
 - `LESSA_CORS_ORIGINS`: JSON list of allowed frontend origins.
 - `LESSA_SEQUENCE_LENGTH`: model sequence length. Current model expects `60`.
+- `LESSA_WINDOW_SIZE`: active sliding window before padding. Current console inference uses `25` frames.
 - `LESSA_BASE_FEATURE_LENGTH`: position-only feature length. Current preprocessing uses `306`.
-- `LESSA_USE_TEMPORAL_FEATURES`: current model expects temporal deltas enabled, producing `612` features.
+- `LESSA_USE_TEMPORAL_FEATURES`: current model expects temporal deltas enabled.
+- `LESSA_TEMPORAL_DELTA_ORDER`: number of temporal derivative groups appended to each position vector. Current model expects `2`, producing `918` features: positions, first-order deltas, and second-order deltas computed over the active window before padding.
 
 For local development, `.env` points to the existing artifact in `modeloTutorialFtGemini/models/modelo_señas_lstm.keras`.
 

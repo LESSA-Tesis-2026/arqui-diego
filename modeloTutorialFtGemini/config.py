@@ -30,7 +30,7 @@ LENGTH_KEYPOINTS = get_feature_length(BASE_LENGTH_KEYPOINTS, USE_TEMPORAL_FEATUR
 # RECORD_DURATION_SECONDS. If False, recording stops manually with 's'.
 PRE_RECORD_COUNTDOWN_SECONDS = 1
 RECORD_DURATION_SECONDS = 2.5
-AUTO_STOP_RECORDING = True
+AUTO_STOP_RECORDING = False
 
 # PATHS
 ROOT_PATH = os.getcwd()
@@ -41,7 +41,7 @@ MODEL_PATH = os.path.join(MODEL_FOLDER_PATH, "modelo_señas_lstm.keras")
 VIDEOS_FOLDER = os.path.join(ROOT_PATH, "videos")
 
 # DICCIONARIO DE PALABRAS
-WORDS = ["hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate", "nada", "buenas tardes", "buenas noches", "como estas", "cual es tu nombre", "permiso", "adios", "perdon", "otra vez", "por favor", "duda", "nos vemos luego", "por que", "si", "no", "talvez", "no se"] # Agrega aquí todas tus palabras
+WORDS = ["hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate", "buenas tardes", "buenas noches", "como estas", "cual es tu nombre", "permiso", "adios", "perdon", "otra vez", "por favor", "duda", "nos vemos luego", "por que", "si", "no", "talvez", "no se", "nada"] # Agrega aquí todas tus palabras
 
 # buenas tardes, buenas noches, como estas, cual es tu nombre, permiso, adios, perdon, otra vez, por favor, duda, nos vemos luego, por que?
 # si, no, talvez, no se, 

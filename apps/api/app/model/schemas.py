@@ -14,6 +14,7 @@ class ModelInfoResponse(BaseModel):
     base_feature_length: int
     feature_length: int
     use_temporal_features: bool
+    temporal_delta_order: int
     confidence_threshold: float
     input_shape: list[int | None] | None
     output_shape: list[int | None] | None

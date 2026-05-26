@@ -120,20 +120,26 @@ def extract_keypoints(results: object, base_feature_length: int) -> FrameExtract
     )
 
 
-def build_frame_features(
-    current_position: np.ndarray,
-    previous_position: np.ndarray | None,
+def build_sequence_features(
+    position_sequence: list[np.ndarray],
     use_temporal_features: bool,
-) -> tuple[np.ndarray, np.ndarray]:
+    temporal_delta_order: int,
+) -> list[np.ndarray]:
+    sequence = np.asarray(position_sequence, dtype=np.float32)
+
     if not use_temporal_features:
-        return current_position, current_position
+        return list(sequence)
 
-    if previous_position is None:
-        delta = np.zeros_like(current_position)
-    else:
-        delta = current_position - previous_position
+    # Mirrors modeloTutorialFtGemini/3_traduccion_tiempo_real.py: compute
+    # velocity and acceleration from the active sliding window before padding.
+    delta = np.vstack([sequence[0:1, :], np.diff(sequence, axis=0)]).astype(np.float32)
+    features = [sequence, delta]
 
-    return np.concatenate([current_position, delta], axis=0).astype(np.float32), current_position
+    if temporal_delta_order >= 2:
+        acceleration = np.vstack([delta[0:1, :], np.diff(delta, axis=0)]).astype(np.float32)
+        features.append(acceleration)
+
+    return list(np.concatenate(features, axis=-1).astype(np.float32))
 
 
 def pad_sequence(sequence: list[np.ndarray], sequence_length: int, feature_length: int) -> np.ndarray:

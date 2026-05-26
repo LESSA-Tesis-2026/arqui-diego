@@ -20,8 +20,9 @@ def test_model_info_reports_configuration() -> None:
     body = response.json()
     assert body["labels"]
     assert body["sequence_length"] == 60
-    assert body["window_size"] == 40
-    assert body["feature_length"] == 612
+    assert body["window_size"] == 25
+    assert body["feature_length"] == 918
+    assert body["temporal_delta_order"] == 2
 
 
 def test_translate_reset_message() -> None:

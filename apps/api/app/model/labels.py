@@ -5,6 +5,7 @@ LABELS: list[str] = [
     "mucho gusto",
     "mi_nombre_es",
     "cuidate",
+    "nada",
     "buenas tardes",
     "buenas noches",
     "como estas",
@@ -21,5 +22,4 @@ LABELS: list[str] = [
     "no",
     "talvez",
     "no se",
-    "nada",
 ]

@@ -11,20 +11,23 @@ class Settings(BaseSettings):
 
     model_path: Path = Path("artifacts/modelo_senas_lstm.keras")
     sequence_length: int = 60
-    window_size: int = 40
+    window_size: int = 25
     base_feature_length: int = 306
     use_temporal_features: bool = True
-    confidence_threshold: float = 0.75
-    voting_buffer_size: int = 15
-    min_votes: int = 10
-    max_sentence_words: int = 12
+    temporal_delta_order: int = 2
+    confidence_threshold: float = 0.65
+    voting_buffer_size: int = 10
+    min_votes: int = 7
+    max_sentence_words: int = 5
     pause_reset_frames: int = 15
 
     model_config = SettingsConfigDict(env_prefix="LESSA_", env_file=".env")
 
     @property
     def feature_length(self) -> int:
-        return self.base_feature_length * 2 if self.use_temporal_features else self.base_feature_length
+        if not self.use_temporal_features:
+            return self.base_feature_length
+        return self.base_feature_length * (1 + self.temporal_delta_order)
 
     @property
     def resolved_model_path(self) -> Path:

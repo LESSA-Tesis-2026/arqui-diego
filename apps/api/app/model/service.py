@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.core.config import Settings
 from app.model.labels import LABELS
 from app.model.preprocessing import (
-    build_frame_features,
+    build_sequence_features,
     decode_frame,
     extract_keypoints,
     holistic_context,
@@ -26,7 +26,6 @@ class TranslationSession:
     settings: Settings
     sequence: collections.deque[np.ndarray] = field(init=False)
     predictions_buffer: collections.deque[str] = field(init=False)
-    previous_position: np.ndarray | None = None
     sentence: list[str] = field(default_factory=list)
     last_emitted_word: str = "nada"
     nada_counter: int = 0
@@ -38,7 +37,6 @@ class TranslationSession:
     def reset(self) -> None:
         self.sequence.clear()
         self.predictions_buffer.clear()
-        self.previous_position = None
         self.sentence.clear()
         self.last_emitted_word = "nada"
         self.nada_counter = 0
@@ -72,6 +70,7 @@ class LessaModelService:
             base_feature_length=self.settings.base_feature_length,
             feature_length=self.settings.feature_length,
             use_temporal_features=self.settings.use_temporal_features,
+            temporal_delta_order=self.settings.temporal_delta_order,
             confidence_threshold=self.settings.confidence_threshold,
             input_shape=input_shape,
             output_shape=output_shape,
@@ -102,12 +101,7 @@ class LessaModelService:
         if not extraction.has_hands:
             position_keypoints = np.zeros(self.settings.base_feature_length, dtype=np.float32)
 
-        frame_features, session.previous_position = build_frame_features(
-            position_keypoints,
-            session.previous_position,
-            self.settings.use_temporal_features,
-        )
-        session.sequence.append(frame_features)
+        session.sequence.append(position_keypoints)
 
         if len(session.sequence) < self.settings.window_size:
             return self._empty_response(
@@ -116,8 +110,13 @@ class LessaModelService:
                 has_hands=extraction.has_hands,
             )
 
-        model_input = pad_sequence(
+        sequence_features = build_sequence_features(
             list(session.sequence),
+            self.settings.use_temporal_features,
+            self.settings.temporal_delta_order,
+        )
+        model_input = pad_sequence(
+            sequence_features,
             self.settings.sequence_length,
             self.settings.feature_length,
         )

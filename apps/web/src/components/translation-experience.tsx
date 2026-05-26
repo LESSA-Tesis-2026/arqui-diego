@@ -21,6 +21,10 @@ type PredictionHistoryItem = {
   confidence: number;
 };
 
+const fallbackFrameIntervalMs = 33;
+const frameWidth = 640;
+const jpegQuality = 0.92;
+
 const displayLabels: Record<string, string> = {
   buenos_dias: "buenos días",
   "como estas": "cómo estás",
@@ -55,7 +59,9 @@ export function TranslationExperience() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
-  const intervalRef = useRef<number | null>(null);
+  const videoFrameCallbackRef = useRef<number | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastFallbackFrameAtRef = useRef(0);
 
   const [cameraState, setCameraState] = useState<CameraState>("idle");
   const [translationState, setTranslationState] = useState<TranslationState>("idle");
@@ -67,31 +73,18 @@ export function TranslationExperience() {
   const [top, setTop] = useState<TopPrediction[]>([]);
   const [history, setHistory] = useState<PredictionHistoryItem[]>([]);
 
-  useEffect(() => {
-    let mounted = true;
+  function stopFrameLoop() {
+    const video = videoRef.current;
+    if (video && videoFrameCallbackRef.current !== null && "cancelVideoFrameCallback" in video) {
+      video.cancelVideoFrameCallback(videoFrameCallbackRef.current);
+      videoFrameCallbackRef.current = null;
+    }
 
-    getModelInfo()
-      .then((info) => {
-        if (!mounted) return;
-        setStatus(info.available ? "Modelo listo" : "Traductor en espera");
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setTranslationState("unavailable");
-        setStatus("No se pudo conectar con el traductor");
-      });
-
-    return () => {
-      mounted = false;
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      socketRef.current?.close();
-      socketRef.current = null;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-    };
-  }, []);
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }
 
   async function activateCamera() {
     setCameraState("requesting");
@@ -131,7 +124,7 @@ export function TranslationExperience() {
     socket.onopen = () => {
       setTranslationState("active");
       setStatus("Traduciendo en vivo");
-      intervalRef.current = window.setInterval(sendFrame, 180);
+      startFrameLoop();
     };
 
     socket.onmessage = (event) => {
@@ -146,7 +139,7 @@ export function TranslationExperience() {
     };
 
     socket.onclose = () => {
-      stopFrameInterval();
+      stopFrameLoop();
     };
   }
 
@@ -172,16 +165,39 @@ export function TranslationExperience() {
   }
 
   function stopStreaming() {
-    stopFrameInterval();
+    stopFrameLoop();
     socketRef.current?.close();
     socketRef.current = null;
   }
 
-  function stopFrameInterval() {
-    if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
+  function startFrameLoop() {
+    stopFrameLoop();
+    const video = videoRef.current;
+
+    if (video && "requestVideoFrameCallback" in video) {
+      const tick: VideoFrameRequestCallback = () => {
+        sendFrame();
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          videoFrameCallbackRef.current = video.requestVideoFrameCallback(tick);
+        }
+      };
+
+      videoFrameCallbackRef.current = video.requestVideoFrameCallback(tick);
+      return;
     }
+
+    const fallbackTick = (timestamp: number) => {
+      if (timestamp - lastFallbackFrameAtRef.current >= fallbackFrameIntervalMs) {
+        lastFallbackFrameAtRef.current = timestamp;
+        sendFrame();
+      }
+
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        animationFrameRef.current = window.requestAnimationFrame(fallbackTick);
+      }
+    };
+
+    animationFrameRef.current = window.requestAnimationFrame(fallbackTick);
   }
 
   function sendFrame() {
@@ -191,8 +207,9 @@ export function TranslationExperience() {
 
     if (!video || !canvas || socket?.readyState !== WebSocket.OPEN) return;
     if (!video.videoWidth || !video.videoHeight) return;
+    if (socket.bufferedAmount > 0) return;
 
-    const width = 480;
+    const width = frameWidth;
     const height = Math.round((video.videoHeight / video.videoWidth) * width);
     canvas.width = width;
     canvas.height = height;
@@ -201,7 +218,7 @@ export function TranslationExperience() {
     if (!context) return;
 
     context.drawImage(video, 0, 0, width, height);
-    socket.send(frameMessage(canvas.toDataURL("image/jpeg", 0.68)));
+    socket.send(frameMessage(canvas.toDataURL("image/jpeg", jpegQuality)));
   }
 
   function handleTranslationMessage(message: TranslationMessage) {
@@ -225,6 +242,29 @@ export function TranslationExperience() {
       ].slice(0, 6));
     }
   }
+
+  useEffect(() => {
+    let mounted = true;
+
+    getModelInfo()
+      .then((info) => {
+        if (!mounted) return;
+        setStatus(info.available ? "Modelo listo" : "Traductor en espera");
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setTranslationState("unavailable");
+        setStatus("No se pudo conectar con el traductor");
+      });
+
+    return () => {
+      mounted = false;
+      stopFrameLoop();
+      socketRef.current?.close();
+      socketRef.current = null;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   const isActive = translationState === "active" || translationState === "connecting";
   const displayText = text ? sentenceCase(lastWords(text, 3)) : "Esperando";

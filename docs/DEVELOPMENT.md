@@ -82,6 +82,9 @@ Docker does not have separate `.env.*` example files. The Docker-specific values
 Important Docker overrides:
 
 - `LESSA_MODEL_PATH=/models/modelo_senas_lstm.keras`, matching the model bind mount in the API service.
+- `LESSA_TEMPORAL_DELTA_ORDER=2`, matching the current model input shape of `(60, 918)`.
+- `LESSA_WINDOW_SIZE=25`, matching the console translator's active frame window before padding to `60`.
+- `LESSA_CONFIDENCE_THRESHOLD=0.65`, `LESSA_VOTING_BUFFER_SIZE=10`, and `LESSA_MIN_VOTES=7`, matching the console translator's stabilization settings.
 - `LESSA_CORS_ORIGINS=["http://localhost:3000"]`, matching the published web origin.
 - `NEXT_PUBLIC_API_URL=http://localhost:8000`, matching the API port reachable from the browser.
 

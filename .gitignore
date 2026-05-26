@@ -13,7 +13,7 @@ __pycache__/
 venv/
 .venv/
 env/
-.env/
+*.env
 ENV/
 
 # ─────────────────────────────────────────
@@ -86,3 +86,9 @@ $RECYCLE.BIN/
 *.log
 *.tmp
 *.temp
+
+.agents/
+.codex/
+.opencode/
+openspec/
+skills-lock.json
