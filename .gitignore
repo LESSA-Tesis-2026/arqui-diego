@@ -28,6 +28,8 @@ modeloTutorialFtGemini/data_h5/*.h5
 modeloTutorialFtGemini/data_h5_v1/*.h5
 modeloTutorialFtGemini/data_h5_v2/*.h5
 modeloTutorialFtGemini/data_unir/*.h5
+modeloAlfabeto/dataset_alfabeto/
+modeloAlfabeto/data_h5_alfabeto/
 
 # videos
 modeloTutorialFtGemini/videos/
@@ -46,6 +48,7 @@ modeloTutorialFtGemini/modelo2/*.png
 modeloTutorialFtGemini/modelo3/*.keras
 modeloTutorialFtGemini/modelo3/*.h5
 modeloTutorialFtGemini/modelo3/*.png
+modeloAlfabeto/modelo_alfabeto/
 
 # ─────────────────────────────────────────
 #  Métricas y gráficas generadas
