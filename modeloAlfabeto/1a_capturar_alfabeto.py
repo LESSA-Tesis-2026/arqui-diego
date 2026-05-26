@@ -57,6 +57,7 @@ def capture_images(letter, target_images=200, delay_seconds=0.1):
     
     cap = cv2.VideoCapture(0)
     recording = False
+    paused = False
     last_capture_time = time.time()
     current_idx = existing_images
 
@@ -85,10 +86,20 @@ def capture_images(letter, target_images=200, delay_seconds=0.1):
                 2,
             )
 
-            if recording:
+            if recording and paused:
                 cv2.putText(
                     display_frame,
-                    "CAPTURANDO... (Mueve la mano ligeramente)",
+                    "PAUSADO - Reposicionate y presiona ESPACIO para continuar",
+                    (10, 70),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 165, 255),
+                    2,
+                )
+            elif recording:
+                cv2.putText(
+                    display_frame,
+                    "CAPTURANDO... (ESPACIO pausa)",
                     (10, 70),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
@@ -127,6 +138,13 @@ def capture_images(letter, target_images=200, delay_seconds=0.1):
 
             if key == ord('r'):
                 recording = True
+                paused = False
+                last_capture_time = time.time()
+            elif key == ord(' '):
+                if recording:
+                    paused = not paused
+                    if not paused:
+                        last_capture_time = time.time()
             elif key == ord('q'):
                 break
 

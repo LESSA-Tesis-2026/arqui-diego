@@ -121,12 +121,13 @@ uv run python 1a_capturar_alfabeto.py
 Controls:
 
 - Press `r` to start auto-capture for the current letter.
+- Press `space` to pause/resume captures while you reposition.
 - Press `q` to quit.
 
 The script currently controls the capture amount in its main block:
 
 ```python
-META_IMAGENES = 6
+META_IMAGENES = 100
 TIEMPO_ESPERA = 1.0
 ```
 
