@@ -17,7 +17,7 @@ SELECTED_FACE_INDICES = [
 LENGTH_KEYPOINTS = 306
 
 # PATHS
-ROOT_PATH = os.getcwd()
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(ROOT_PATH, "data_h5")
 MODEL_FOLDER_PATH = os.path.join(ROOT_PATH, "models")
 METRICS_FOLDER = os.path.join(ROOT_PATH, "metricas_modelo")
