@@ -28,6 +28,11 @@ modeloTutorial/frame_actions/
 
 # Dataset alfabeto
 modeloAlfabeto/dataset_alfabeto/
+modeloAlfabeto/data_h5_alfabeto/
+modeloAlfabeto/modelo_alfabeto/
+modeloAlfabeto/modelo_alfabeto_v1/
+modeloAlfabeto/modelo_alfabeto_v2/
+modeloAlfabeto/modelo_alfabeto_v3/
 
 # Keypoints / datasets en HDF5
 modeloTutorial/data/keypoints/*.h5
