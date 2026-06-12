@@ -72,4 +72,4 @@ def real_time_alphabet(threshold=0.80):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    real_time_alphabet(threshold=0.75)
+    real_time_alphabet(threshold=0.80)

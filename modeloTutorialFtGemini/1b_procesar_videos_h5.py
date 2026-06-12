@@ -4,7 +4,6 @@ import h5py
 import mediapipe as mp
 import os
 from config import *
-from utils import add_temporal_features_to_sequence
 
 
 def process_videos_to_h5():
@@ -31,19 +30,15 @@ def process_videos_to_h5():
 
             # Abrimos el .h5 en modo append para añadir o leer lo existente
             with h5py.File(h5_file_path, 'a') as hf:
+                existing_datasets = list(hf.keys())
 
                 for video_file in video_files:
                     # Obtenemos el nombre base (ej. convertimos 'sample_0.avi' a 'sample_0')
                     dataset_name = os.path.splitext(video_file)[0]
 
-                    # Si el dataset ya existe y coincide con la dimensión actual, lo saltamos.
-                    # Si existe pero con otra dimensión (cambio de features), se reemplaza.
-                    if dataset_name in hf:
-                        existing_shape = hf[dataset_name].shape
-                        if len(existing_shape) == 2 and existing_shape[1] == LENGTH_KEYPOINTS:
-                            continue
-                        del hf[dataset_name]
-                        print(f"Reemplazando {dataset_name} por cambio de dimensión ({existing_shape} -> * x {LENGTH_KEYPOINTS})")
+                    # Si este video ya está en el .h5, lo saltamos
+                    if dataset_name in existing_datasets:
+                        continue
 
                     video_path = os.path.join(word_folder, video_file)
                     cap = cv2.VideoCapture(video_path)
@@ -65,15 +60,8 @@ def process_videos_to_h5():
 
                     # Guardamos la secuencia matemática extraída en el .h5
                     if sequence_data:
-                        position_sequence = np.array(sequence_data, dtype=np.float32)
-                        final_sequence = add_temporal_features_to_sequence(
-                            position_sequence, USE_TEMPORAL_FEATURES
-                        )
-                        hf.create_dataset(dataset_name, data=final_sequence)
-                        print(
-                            f"Procesado: {dataset_name} | Frames: {len(sequence_data)} | "
-                            f"Features/frame: {final_sequence.shape[1]}"
-                        )
+                        hf.create_dataset(dataset_name, data=np.array(sequence_data))
+                        print(f"Procesado: {dataset_name} | Longitud: {len(sequence_data)} frames")
                     else:
                         print(f"ADVERTENCIA: No se detectó información en {video_file}")
 

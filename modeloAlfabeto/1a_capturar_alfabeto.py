@@ -107,6 +107,17 @@ def capture_images(letter, target_images=200, delay_seconds=0.1):
                     2,
                 )
 
+                remaining = max(0.0, delay_seconds - (time.time() - last_capture_time))
+                cv2.putText(
+                    display_frame,
+                    f"Siguiente captura en: {remaining:.1f}s",
+                    (10, 110),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 0, 255),
+                    2,
+                )
+
                 # Lógica del temporizador
                 if time.time() - last_capture_time > delay_seconds:
                     img_path = os.path.join(letter_folder, f"img_{current_idx}.jpg")

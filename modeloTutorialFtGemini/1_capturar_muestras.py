@@ -4,7 +4,6 @@ import h5py
 import mediapipe as mp
 import os
 from config import *
-from utils import add_temporal_features_to_sequence
 
 def draw_custom_keypoints(image, results):
     mp_drawing = mp.solutions.drawing_utils
@@ -97,22 +96,11 @@ def capture_dynamic_samples(word, target_samples=60):
                         recording = True
                     elif key == ord('s') and recording:
                         recording = False
-
-                        if not sequence_data:
-                            print("Muestra vacía ignorada (no se guardó).")
-                            break
-
+                        
                         # Guardar usando el índice calculado
                         dataset_name = f"sample_{current_sample_idx}"
-                        position_sequence = np.array(sequence_data, dtype=np.float32)
-                        final_sequence = add_temporal_features_to_sequence(
-                            position_sequence, USE_TEMPORAL_FEATURES
-                        )
-                        hf.create_dataset(dataset_name, data=final_sequence)
-                        print(
-                            f"Muestra {current_sample_idx + 1} guardada con {len(sequence_data)} frames "
-                            f"y {final_sequence.shape[1]} features/frame."
-                        )
+                        hf.create_dataset(dataset_name, data=np.array(sequence_data))
+                        print(f"Muestra {current_sample_idx + 1} guardada con {len(sequence_data)} frames.")
                         break
                     elif key == ord('q'):
                         print("\nGrabación interrumpida por el usuario.")

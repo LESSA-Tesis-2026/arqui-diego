@@ -1,7 +1,7 @@
 import os
 import cv2
 import numpy as np
-from utils import get_feature_length
+import mediapipe as mp
 
 # SETTINGS
 MAX_FRAMES = 60 # Longitud máxima para el padding (puede ajustare si se hacen señas muy largas)
@@ -13,27 +13,11 @@ SELECTED_FACE_INDICES = [
     70, 63, 105, 336, 296, 334   # Cejas
 ]
 
-# 33*4 (pose) + 16*3 (selected face) + 21*3 (lh) + 21*3 (rh)
-BASE_LENGTH_KEYPOINTS = 306
-
-# Toggle to include first-order temporal deltas:
-# final feature vector becomes [positions, deltas].
-USE_TEMPORAL_FEATURES = True
-
-# Final per-frame feature length used by training/inference.
-LENGTH_KEYPOINTS = get_feature_length(BASE_LENGTH_KEYPOINTS, USE_TEMPORAL_FEATURES)
-
-# CAPTURE TIMING SETTINGS (seconds)
-# PRE_RECORD_COUNTDOWN_SECONDS: visual wait time before recording starts.
-# RECORD_DURATION_SECONDS: fixed duration for each video before auto-stop.
-# AUTO_STOP_RECORDING: if True, recording stops automatically after
-# RECORD_DURATION_SECONDS. If False, recording stops manually with 's'.
-PRE_RECORD_COUNTDOWN_SECONDS = 1
-RECORD_DURATION_SECONDS = 2.5
-AUTO_STOP_RECORDING = False
+# 33*4 (pose) + 16*3 (cara seleccionada) + 21*3 (lh) + 21*3 (rh)
+LENGTH_KEYPOINTS = 306
 
 # PATHS
-ROOT_PATH = os.getcwd()
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(ROOT_PATH, "data_h5")
 MODEL_FOLDER_PATH = os.path.join(ROOT_PATH, "models")
 METRICS_FOLDER = os.path.join(ROOT_PATH, "metricas_modelo")
@@ -41,10 +25,9 @@ MODEL_PATH = os.path.join(MODEL_FOLDER_PATH, "modelo_señas_lstm.keras")
 VIDEOS_FOLDER = os.path.join(ROOT_PATH, "videos")
 
 # DICCIONARIO DE PALABRAS
-WORDS = ["hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate", "buenas tardes", "buenas noches", "como estas", "cual es tu nombre", "permiso", "adios", "perdon", "otra vez", "por favor", "duda", "nos vemos luego", "por que", "si", "no", "talvez", "no se", "nada"] # Agrega aquí todas tus palabras
+WORDS = ["hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate", "nada", "buenas tardes", "buenas noches", "como estas", "cual es tu nombre", "permiso", "adios", "perdon", "otra vez", "por favor", "duda", "nos vemos luego", "por que", "si", "no", "talvez", "no se"] 
 
-# buenas tardes, buenas noches, como estas, cual es tu nombre, permiso, adios, perdon, otra vez, por favor, duda, nos vemos luego, por que?
-# si, no, talvez, no se, 
+# ["hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate", "nada", "buenas tardes", "buenas noches", "como estas", "cual es tu nombre", "permiso", "adios", "perdon", "otra vez", "por favor", "duda", "nos vemos luego", "por que", "si", "no", "talvez", "no se"]
 
 # FUNCIONES MEDIAPIPE
 def mediapipe_detection(image, model):

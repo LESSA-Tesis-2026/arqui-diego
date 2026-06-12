@@ -6,8 +6,8 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import collections
 from config import *
 
-# (Mantén tu función draw_keypoints igual que antes)
 def draw_keypoints(image, results):
+    # Usamos la función de dibujo estándar de MediaPipe para la interfaz
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
     if results.pose_landmarks:
@@ -17,20 +17,23 @@ def draw_keypoints(image, results):
     if results.right_hand_landmarks:
         mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
-def real_time_translation(threshold=0.65):
+def real_time_translation(threshold=0.75):
     model = load_model(MODEL_PATH)
     mp_holistic = mp.solutions.holistic
     
-    WINDOW_SIZE = 25           
-    VOTING_BUFFER_SIZE = 10    
-    MIN_VOTES = 7             
+    # 1. PARÁMETROS CSLR (Ajustables según la velocidad de tus señas)
+    WINDOW_SIZE = 40           # Tamaño de la ventana deslizante (aprox. 1 segundo de video)
+    VOTING_BUFFER_SIZE = 15    # Historial de predicciones para el suavizado
+    MIN_VOTES = 10             # Votos necesarios para confirmar una palabra
     
+    # 2. ESTRUCTURAS DE DATOS CONTINUAS
     sequence = collections.deque(maxlen=WINDOW_SIZE)
     predictions_buffer = collections.deque(maxlen=VOTING_BUFFER_SIZE)
     
+    # 3. MÁQUINA DE ESTADOS
     sentence = []
     last_emitted_word = "nada"
-    nada_counter = 0           
+    nada_counter = 0           # Cuenta cuánto tiempo llevamos en reposo
     current_probs = np.zeros(len(WORDS))
     
     cap = cv2.VideoCapture(0)
@@ -43,32 +46,21 @@ def real_time_translation(threshold=0.65):
             image, results = mediapipe_detection(frame, holistic)
             draw_keypoints(image, results)
             
-            # --- FASE 1: EXTRACCIÓN DE POSICIÓN (306 valores) ---
+            # --- FASE 1: EXTRACCIÓN Y VENTANA DESLIZANTE ---
             if results.left_hand_landmarks or results.right_hand_landmarks:
+                # Utilizamos la función de config.py que ya calcula coordenadas relativas a la nariz
                 keypoints = extract_keypoints(results)
                 sequence.append(keypoints)
             else:
+                # Si las manos salen de cámara, inyectamos ceros para mantener el flujo de tiempo real
                 sequence.append(np.zeros(LENGTH_KEYPOINTS))
             
-            # --- FASE 2: CINEMÁTICA Y PREDICCIÓN EN TIEMPO REAL ---
+            # --- FASE 2: PREDICCIÓN CONTINUA ---
             if len(sequence) == WINDOW_SIZE:
+                # El modelo espera MAX_FRAMES (60). Rellenamos nuestra ventana de 40 con ceros al final.
+                # La capa Masking ignorará este relleno matemático.
+                pad_seq = pad_sequences([list(sequence)], maxlen=MAX_FRAMES, padding='post', dtype='float32')
                 
-                # 1. Convertimos la memoria reciente a una matriz matemática
-                seq_array = np.array(sequence)
-                
-                # 2. Calculamos Velocidad (Delta) al vuelo
-                delta = np.vstack([seq_array[0:1, :], np.diff(seq_array, axis=0)])
-                
-                # 3. Calculamos Aceleración (Delta-Delta) al vuelo
-                delta_delta = np.vstack([delta[0:1, :], np.diff(delta, axis=0)])
-                
-                # 4. Fusionamos todo (306 + 306 + 306 = 918 características)
-                combined_seq = np.concatenate([seq_array, delta, delta_delta], axis=-1)
-                
-                # 5. Rellenamos con ceros hasta llegar a MAX_FRAMES (60)
-                pad_seq = pad_sequences([combined_seq], maxlen=MAX_FRAMES, padding='post', dtype='float32')
-                
-                # 6. Predicción
                 res = model.predict(pad_seq, verbose=0)[0]
                 current_probs = res 
                 best_match_idx = np.argmax(res)
@@ -78,24 +70,36 @@ def real_time_translation(threshold=0.65):
                 else:
                     current_word = "nada"
                 
+                # Agregamos la predicción al búfer de votación
                 predictions_buffer.append(current_word)
                 
-                # --- FASE 3: MÁQUINA DE ESTADOS Y SUAVIZADO ---
+                # --- FASE 3: SUAVIZADO Y LÓGICA DE TRANSICIÓN ---
+                # Validamos cuál es la palabra más repetida en el último instante de tiempo
                 word_counts = collections.Counter(predictions_buffer)
                 most_common_word, count = word_counts.most_common(1)[0]
                 
-                if count >= MIN_VOTES: stable_word = most_common_word
-                else: stable_word = "nada"
+                if count >= MIN_VOTES:
+                    stable_word = most_common_word
+                else:
+                    stable_word = "nada"
                 
+                # Máquina de estados para emitir la palabra a la oración
                 if stable_word != "nada":
-                    nada_counter = 0 
+                    nada_counter = 0 # Reiniciamos el contador de reposo
+                    
+                    # Solo agregamos si es una palabra nueva (evita "hola hola hola")
                     if stable_word != last_emitted_word:
                         sentence.append(stable_word)
                         last_emitted_word = stable_word
-                        if len(sentence) > 5: sentence = sentence[-5:]
+                        
+                        # Mantenemos la oración en un máximo de 5 palabras para no saturar la pantalla
+                        if len(sentence) > 5:
+                            sentence = sentence[-5:]
+                            
                 else:
+                    # Si detectamos "nada" constantemente, permitimos que el usuario repita la última palabra
                     nada_counter += 1
-                    if nada_counter > 15: 
+                    if nada_counter > 15: # Medio segundo de pausa real
                         last_emitted_word = "nada"
 
             # --- INTERFAZ GRÁFICA ---
@@ -122,4 +126,4 @@ def real_time_translation(threshold=0.65):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    real_time_translation(threshold=0.65)
+    real_time_translation(threshold=0.75)
