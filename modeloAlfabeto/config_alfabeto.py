@@ -7,10 +7,9 @@ import mediapipe as mp
 ALPHABET = list("ABCDEFGHIKLMNOPQRSTUVWXY") 
 
 # 2. RUTAS DE DIRECTORIOS
-ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-DATASET_FOLDER = os.path.join(ROOT_PATH, "dataset_alfabeto")
-DATA_H5_FOLDER = os.path.join(ROOT_PATH, "data_h5_alfabeto")
-MODEL_FOLDER = os.path.join(ROOT_PATH, "modelo_alfabeto")
+DATASET_FOLDER = "dataset_alfabeto"
+DATA_H5_FOLDER = "data_h5_alfabeto"
+MODEL_FOLDER = "modelo_alfabeto"
 METRICS_FOLDER = os.path.join(MODEL_FOLDER, "metricas")
 MODEL_PATH = os.path.join(MODEL_FOLDER, "modelo_letras.h5")
 
