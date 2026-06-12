@@ -104,3 +104,20 @@ $RECYCLE.BIN/
 *.log
 *.tmp
 *.temp
+
+# ─────────────────────────────────────────
+#  Local Codex / agent tooling
+# ─────────────────────────────────────────
+.agents/skills/fastapi/
+.agents/skills/frontend-design/
+.agents/skills/vercel-react-best-practices/
+.codex/
+.opencode/
+openspec/
+skills-lock.json
+
+# ─────────────────────────────────────────
+#  Local app secrets and generated artifacts
+# ─────────────────────────────────────────
+apps/api/.env
+apps/api/artifacts/modelo_señas_lstm.keras
