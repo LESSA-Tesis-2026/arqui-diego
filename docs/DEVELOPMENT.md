@@ -73,6 +73,10 @@ The frontend expects the API at `http://localhost:8000` by default. Override it 
 NEXT_PUBLIC_API_URL="http://localhost:8000" pnpm dev
 ```
 
+### Spoken feedback
+
+The translation UI uses the browser `SpeechSynthesis` API for optional voice feedback. It is frontend-only: the backend still emits text tokens over the WebSocket, and the browser speaks only accepted emissions (`emitted_token` or `emitted_word`). Words mode speaks complete Spanish words or phrases, while Alphabet mode speaks each emitted letter. Unsupported browsers keep translating normally and mark voice as unavailable in the UI.
+
 Useful frontend checks:
 
 ```bash

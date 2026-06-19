@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, RotateCcw, Waves, X } from "lucide-react";
+import { Pause, Play, RotateCcw, Volume2, VolumeX, Waves, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 import { getModelInfo } from "@/lib/api";
+import { useSpeechSynthesis } from "@/lib/use-speech-synthesis";
 import {
   createTranslationSocket,
   frameMessage,
@@ -117,6 +118,8 @@ export function TranslationExperience() {
     word: true,
     alphabet: true,
   });
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const { cancel: cancelSpeech, speak, speaking, supported: speechSupported } = useSpeechSynthesis();
 
   function stopFrameLoop() {
     const video = videoRef.current;
@@ -195,6 +198,7 @@ export function TranslationExperience() {
   }
 
   function clearTranslation() {
+    cancelSpeech();
     setText("");
     setLatestSign(null);
     setConfidence(0);
@@ -211,6 +215,7 @@ export function TranslationExperience() {
   }
 
   function stopStreaming() {
+    cancelSpeech();
     stopFrameLoop();
     socketRef.current?.close();
     socketRef.current = null;
@@ -254,6 +259,13 @@ export function TranslationExperience() {
   function selectMode(mode: InferenceMode) {
     selectedModeRef.current = mode;
     setSelectedMode(mode);
+  }
+
+  function toggleVoiceFeedback() {
+    setVoiceEnabled((current) => {
+      if (current) cancelSpeech();
+      return !current;
+    });
   }
 
   function sendFrame() {
@@ -342,6 +354,12 @@ export function TranslationExperience() {
 
     const emitted = message.emitted_token ?? message.emitted_word;
     if (emitted) {
+      // Audio is tied to emitted tokens only, so unstable frame-level predictions never speak.
+      if (voiceEnabled && speechSupported) {
+        const spoken = message.prediction_type === "letter" ? emitted : formatLabel(emitted);
+        speak(spoken);
+      }
+
       setHistory((current) => [
         {
           label: message.prediction_type === "letter" ? emitted : formatDisplay(emitted),
@@ -370,12 +388,13 @@ export function TranslationExperience() {
 
     return () => {
       mounted = false;
+      cancelSpeech();
       stopFrameLoop();
       socketRef.current?.close();
       socketRef.current = null;
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, []);
+  }, [cancelSpeech]);
 
   const isActive = translationState === "active" || translationState === "connecting";
   const canUseSelectedMode =
@@ -392,6 +411,13 @@ export function TranslationExperience() {
         : !modelAvailability.alphabet
           ? "Modelo de alfabeto no disponible"
           : null;
+  const voiceControlLabel = !speechSupported
+    ? "Voz no disponible"
+    : voiceEnabled
+      ? speaking
+        ? "Hablando"
+        : "Voz activa"
+      : "Voz silenciada";
   const displayText = text ? sentenceCase(lastWords(text, 3)) : "Esperando";
   const primaryActionLabel =
     cameraState !== "active"
@@ -546,6 +572,22 @@ export function TranslationExperience() {
                   );
                 })}
               </div>
+              <Button
+                type="button"
+                variant={voiceEnabled && speechSupported ? "default" : "ghost"}
+                size="sm"
+                disabled={!speechSupported}
+                onClick={toggleVoiceFeedback}
+                aria-pressed={voiceEnabled && speechSupported}
+                aria-label={voiceEnabled ? "Silenciar voz de traducción" : "Activar voz de traducción"}
+                className="rounded-full px-4"
+              >
+                {voiceEnabled && speechSupported ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+                {voiceEnabled && speechSupported ? "Silenciar voz" : "Voz"}
+              </Button>
+              <span className="rounded-full bg-card/55 px-3 py-1.5 text-sm text-muted-foreground ring-1 ring-border/60">
+                {voiceControlLabel}
+              </span>
               {modelWarning ? (
                 <span className="rounded-full bg-destructive/10 px-3 py-1.5 text-sm text-destructive ring-1 ring-destructive/15">
                   {modelWarning}

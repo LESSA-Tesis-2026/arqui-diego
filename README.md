@@ -19,7 +19,7 @@ The browser captures camera frames in `apps/web` and streams them to the API ove
 apps/web -> WS /api/v1/translate/stream -> apps/api
 ```
 
-The API decodes each frame, extracts hand/body landmarks once, builds the word and alphabet feature vectors, and chooses the active recognizer. Auto mode routes moving signs to the word LSTM and static signs to the alphabet classifier; the UI can also force Words or Alphabet mode. The API waits for a short settling window before inference and throttles predictions to avoid flicker. The frontend then renders recognition status, confidence, recent predictions, and the progressive Spanish text.
+The API decodes each frame, extracts hand/body landmarks once, builds the word and alphabet feature vectors, and chooses the active recognizer. Auto mode routes moving signs to the word LSTM and static signs to the alphabet classifier; the UI can also force Words or Alphabet mode. The API waits for a short settling window before inference and throttles predictions to avoid flicker. The frontend then renders recognition status, confidence, recent predictions, and the progressive Spanish text. When browser speech synthesis is available, the frontend can also speak accepted emissions: full words/phrases in Words mode and individual letters in Alphabet mode.
 
 The trained models are runtime artifacts. They are not built by the web or API applications. The word model remains required for word recognition; the alphabet model is optional and its mode is marked unavailable until the `.h5` artifact exists.
 
@@ -32,6 +32,7 @@ The trained models are runtime artifacts. They are not built by the web or API a
 5. API preprocesses frames and runs word or alphabet inference based on the selected mode and motion score.
 6. API sends hybrid translation events back to the browser.
 7. Frontend displays the current translation and session history.
+8. If voice feedback is enabled and supported by the browser, accepted emitted tokens are spoken with the browser SpeechSynthesis API.
 
 ## Local Development
 
