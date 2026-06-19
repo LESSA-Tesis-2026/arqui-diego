@@ -3,18 +3,30 @@ export const API_BASE_URL =
 
 export const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws");
 
-export type ModelInfo = {
+export type RuntimeModelInfo = {
   available: boolean;
   error: string | null;
   labels: string[];
+  model_path: string;
+  input_shape: Array<number | null> | null;
+  output_shape: Array<number | null> | null;
+};
+
+export type ModelInfo = {
+  available: boolean;
+  word_available: boolean;
+  alphabet_available: boolean;
+  word: RuntimeModelInfo;
+  alphabet: RuntimeModelInfo;
   sequence_length: number;
   window_size: number;
   base_feature_length: number;
   feature_length: number;
   use_temporal_features: boolean;
-  confidence_threshold: number;
-  input_shape: Array<number | null> | null;
-  output_shape: Array<number | null> | null;
+  temporal_delta_order: number;
+  word_confidence_threshold: number;
+  alphabet_confidence_threshold: number;
+  hybrid_motion_threshold: number;
 };
 
 export async function getModelInfo(): Promise<ModelInfo> {

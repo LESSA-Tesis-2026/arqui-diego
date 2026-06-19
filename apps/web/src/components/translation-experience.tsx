@@ -10,6 +10,8 @@ import {
   createTranslationSocket,
   frameMessage,
   resetMessage,
+  type InferenceMode,
+  type ResolvedMode,
   type TopPrediction,
   type TranslationMessage,
 } from "@/lib/websocket";
@@ -19,11 +21,29 @@ type TranslationState = "idle" | "connecting" | "active" | "paused" | "unavailab
 type PredictionHistoryItem = {
   label: string;
   confidence: number;
+  kind: "word" | "letter" | "none";
 };
 
-const fallbackFrameIntervalMs = 33;
+type ModelAvailability = {
+  word: boolean;
+  alphabet: boolean;
+};
+
+const frameIntervalMs = 125;
 const frameWidth = 640;
 const jpegQuality = 0.92;
+
+const modeLabels: Record<InferenceMode, string> = {
+  auto: "Auto",
+  words: "Palabras",
+  alphabet: "Alfabeto",
+};
+
+const resolvedModeLabels: Record<ResolvedMode, string> = {
+  words: "Palabras",
+  alphabet: "Alfabeto",
+  none: "Buscando",
+};
 
 const displayLabels: Record<string, string> = {
   buenos_dias: "buenos días",
@@ -54,6 +74,21 @@ function sentenceCase(value: string) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 }
 
+function normalizeLiveStatus(value: string) {
+  const match = value.match(/^(mantén la seña) (\d+(?:\.\d+)?)s$/i);
+  if (!match) return value;
+
+  const seconds = Number(match[2]);
+  if (!Number.isFinite(seconds)) return value;
+
+  const bucket = Math.max(0, Math.ceil(seconds * 2) / 2).toFixed(1);
+  return `${match[1]} ${bucket}s`;
+}
+
+function setIfChanged<T>(setter: (value: T | ((current: T) => T)) => void, value: T) {
+  setter((current: T) => (Object.is(current, value) ? current : value));
+}
+
 export function TranslationExperience() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,7 +96,8 @@ export function TranslationExperience() {
   const socketRef = useRef<WebSocket | null>(null);
   const videoFrameCallbackRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const lastFallbackFrameAtRef = useRef(0);
+  const lastFrameSentAtRef = useRef(0);
+  const selectedModeRef = useRef<InferenceMode>("auto");
 
   const [cameraState, setCameraState] = useState<CameraState>("idle");
   const [translationState, setTranslationState] = useState<TranslationState>("idle");
@@ -72,6 +108,15 @@ export function TranslationExperience() {
   const [hasHands, setHasHands] = useState(false);
   const [top, setTop] = useState<TopPrediction[]>([]);
   const [history, setHistory] = useState<PredictionHistoryItem[]>([]);
+  const [selectedMode, setSelectedMode] = useState<InferenceMode>("auto");
+  const [activeMode, setActiveMode] = useState<ResolvedMode>("none");
+  const [predictionType, setPredictionType] = useState<"word" | "letter" | "none">("none");
+  const [isHoldingReading, setIsHoldingReading] = useState(false);
+  const [motionScore, setMotionScore] = useState(0);
+  const [modelAvailability, setModelAvailability] = useState<ModelAvailability>({
+    word: true,
+    alphabet: true,
+  });
 
   function stopFrameLoop() {
     const video = videoRef.current;
@@ -156,6 +201,7 @@ export function TranslationExperience() {
     setHasHands(false);
     setTop([]);
     setHistory([]);
+    setIsHoldingReading(false);
 
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(resetMessage());
@@ -172,11 +218,16 @@ export function TranslationExperience() {
 
   function startFrameLoop() {
     stopFrameLoop();
+    lastFrameSentAtRef.current = 0;
     const video = videoRef.current;
 
     if (video && "requestVideoFrameCallback" in video) {
-      const tick: VideoFrameRequestCallback = () => {
-        sendFrame();
+      const tick: VideoFrameRequestCallback = (_now, metadata) => {
+        const timestamp = metadata.mediaTime * 1000 || performance.now();
+        if (timestamp - lastFrameSentAtRef.current >= frameIntervalMs) {
+          lastFrameSentAtRef.current = timestamp;
+          sendFrame();
+        }
         if (socketRef.current?.readyState === WebSocket.OPEN) {
           videoFrameCallbackRef.current = video.requestVideoFrameCallback(tick);
         }
@@ -187,8 +238,8 @@ export function TranslationExperience() {
     }
 
     const fallbackTick = (timestamp: number) => {
-      if (timestamp - lastFallbackFrameAtRef.current >= fallbackFrameIntervalMs) {
-        lastFallbackFrameAtRef.current = timestamp;
+      if (timestamp - lastFrameSentAtRef.current >= frameIntervalMs) {
+        lastFrameSentAtRef.current = timestamp;
         sendFrame();
       }
 
@@ -198,6 +249,11 @@ export function TranslationExperience() {
     };
 
     animationFrameRef.current = window.requestAnimationFrame(fallbackTick);
+  }
+
+  function selectMode(mode: InferenceMode) {
+    selectedModeRef.current = mode;
+    setSelectedMode(mode);
   }
 
   function sendFrame() {
@@ -218,26 +274,80 @@ export function TranslationExperience() {
     if (!context) return;
 
     context.drawImage(video, 0, 0, width, height);
-    socket.send(frameMessage(canvas.toDataURL("image/jpeg", jpegQuality)));
+    socket.send(frameMessage(canvas.toDataURL("image/jpeg", jpegQuality), selectedModeRef.current));
   }
 
   function handleTranslationMessage(message: TranslationMessage) {
     if (message.type === "error") {
-      setStatus(message.status);
+      setIfChanged(setStatus, normalizeLiveStatus(message.status));
       return;
     }
 
-    setStatus(message.status);
-    setHasHands(Boolean(message.has_hands));
+    const nextStatus = normalizeLiveStatus(message.status);
+    const nextMode = message.mode ?? "none";
+    const nextPredictionType = message.prediction_type ?? "none";
+    const nextMotionScore = Number((message.motion_score ?? 0).toFixed(4));
+    const shouldHoldPreviousReading =
+      nextPredictionType === "none" &&
+      nextMode !== "none" &&
+      (Boolean(message.has_hands) || nextStatus.toLowerCase().includes("manteniendo"));
 
-    if (message.sentence !== undefined) setText(message.sentence.map(formatLabel).join(" "));
-    else if (message.text !== undefined) setText(formatLabel(message.text));
-    if (message.prediction) setLatestSign(formatDisplay(message.prediction));
-    if (message.confidence !== undefined) setConfidence(message.confidence);
-    if (message.top?.length) setTop(message.top);
-    if (message.emitted_word) {
+    setIfChanged(setStatus, nextStatus);
+    setIfChanged(setHasHands, Boolean(message.has_hands));
+    setIfChanged(setActiveMode, nextMode);
+    if (!shouldHoldPreviousReading) setIfChanged(setPredictionType, nextPredictionType);
+    setIfChanged(setIsHoldingReading, shouldHoldPreviousReading);
+    setMotionScore((current) => (Math.abs(current - nextMotionScore) < 0.0005 ? current : nextMotionScore));
+
+    if (message.word_available !== undefined || message.alphabet_available !== undefined) {
+      setModelAvailability((current) => {
+        const next = {
+          word: message.word_available ?? current.word,
+          alphabet: message.alphabet_available ?? current.alphabet,
+        };
+        return current.word === next.word && current.alphabet === next.alphabet ? current : next;
+      });
+    }
+
+    if (message.text !== undefined) setText((current) => {
+      const next = formatLabel(message.text ?? "");
+      return current === next ? current : next;
+    });
+    else if (message.sentence !== undefined) setText((current) => {
+      const next = message.sentence?.map(formatLabel).join(" ") ?? "";
+      return current === next ? current : next;
+    });
+
+    if (nextPredictionType === "none") {
+      if (!shouldHoldPreviousReading && (nextMode === "none" || !message.has_hands)) {
+        setLatestSign(null);
+        setConfidence(0);
+        setTop([]);
+      }
+    } else if (message.prediction) {
+      setIfChanged(setIsHoldingReading, false);
+      const nextLatestSign =
+        nextPredictionType === "letter"
+          ? message.prediction
+          : formatDisplay(message.prediction);
+      setIfChanged(setLatestSign, nextLatestSign);
+      if (message.confidence !== undefined) setConfidence(message.confidence);
+
+      const ranked =
+        nextPredictionType === "letter"
+          ? (message.alphabet_top ?? message.top)
+          : (message.word_top ?? message.top);
+      setTop(ranked ?? []);
+    }
+
+    const emitted = message.emitted_token ?? message.emitted_word;
+    if (emitted) {
       setHistory((current) => [
-        { label: formatDisplay(message.emitted_word ?? ""), confidence: message.confidence ?? 0 },
+        {
+          label: message.prediction_type === "letter" ? emitted : formatDisplay(emitted),
+          confidence: message.confidence ?? 0,
+          kind: message.prediction_type ?? "none",
+        },
         ...current,
       ].slice(0, 6));
     }
@@ -249,7 +359,8 @@ export function TranslationExperience() {
     getModelInfo()
       .then((info) => {
         if (!mounted) return;
-        setStatus(info.available ? "Modelo listo" : "Traductor en espera");
+        setModelAvailability({ word: info.word_available, alphabet: info.alphabet_available });
+        setStatus(info.available ? "Modelos listos" : "Traductor en espera");
       })
       .catch(() => {
         if (!mounted) return;
@@ -267,6 +378,20 @@ export function TranslationExperience() {
   }, []);
 
   const isActive = translationState === "active" || translationState === "connecting";
+  const canUseSelectedMode =
+    selectedMode === "auto"
+      ? modelAvailability.word || modelAvailability.alphabet
+      : selectedMode === "words"
+        ? modelAvailability.word
+        : modelAvailability.alphabet;
+  const modelWarning =
+    !modelAvailability.word && !modelAvailability.alphabet
+      ? "No hay modelos disponibles"
+      : !modelAvailability.word
+        ? "Modelo de palabras no disponible"
+        : !modelAvailability.alphabet
+          ? "Modelo de alfabeto no disponible"
+          : null;
   const displayText = text ? sentenceCase(lastWords(text, 3)) : "Esperando";
   const primaryActionLabel =
     cameraState !== "active"
@@ -350,10 +475,10 @@ export function TranslationExperience() {
               <AnimatePresence mode="popLayout">
                 <motion.p
                   key={displayText}
-                  initial={{ opacity: 0, y: 14, filter: "blur(8px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
-                  transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                   className={`max-w-3xl text-balance font-medium leading-[0.98] tracking-[-0.065em] ${text ? "text-5xl text-foreground sm:text-6xl lg:text-8xl" : "text-4xl text-muted-foreground/70 sm:text-5xl lg:text-7xl"}`}
                 >
                   {displayText}
@@ -380,6 +505,14 @@ export function TranslationExperience() {
                   )}
                   {hasHands ? "Movimiento detectado" : isActive ? "Buscando movimiento" : "Pausado"}
                 </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-card/55 px-3 py-1.5 ring-1 ring-border/60">
+                  Modo activo: {resolvedModeLabels[activeMode]}
+                </span>
+                {isActive ? (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-card/55 px-3 py-1.5 ring-1 ring-border/60">
+                    Movimiento {motionScore.toFixed(4)} / umbral 0.010
+                  </span>
+                ) : null}
               </motion.div>
             </div>
 
@@ -391,6 +524,34 @@ export function TranslationExperience() {
                   : "El traductor no está disponible en este momento."}
               </div>
             ) : null}
+
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <div className="inline-flex rounded-full border border-border/70 bg-card/65 p-1 shadow-lg shadow-primary/5 backdrop-blur">
+                {(Object.keys(modeLabels) as InferenceMode[]).map((mode) => {
+                  const unavailable =
+                    mode === "words" ? !modelAvailability.word : mode === "alphabet" ? !modelAvailability.alphabet : false;
+                  const selected = selectedMode === mode;
+                  return (
+                    <Button
+                      key={mode}
+                      type="button"
+                      variant={selected ? "default" : "ghost"}
+                      size="sm"
+                      disabled={unavailable}
+                      onClick={() => selectMode(mode)}
+                      className="rounded-full px-4"
+                    >
+                      {modeLabels[mode]}
+                    </Button>
+                  );
+                })}
+              </div>
+              {modelWarning ? (
+                <span className="rounded-full bg-destructive/10 px-3 py-1.5 text-sm text-destructive ring-1 ring-destructive/15">
+                  {modelWarning}
+                </span>
+              ) : null}
+            </div>
             <motion.div
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
@@ -400,7 +561,7 @@ export function TranslationExperience() {
               <section className="max-w-xl space-y-5">
                 <div className="flex items-end justify-between gap-4">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.26em] text-muted-foreground">Lectura</p>
+                    <p className="text-xs uppercase tracking-[0.26em] text-muted-foreground">Lectura · {isHoldingReading ? "Retenida" : predictionType === "letter" ? "Letra" : predictionType === "word" ? "Palabra" : "Espera"}</p>
                     <p className="mt-2 text-2xl font-medium tracking-[-0.05em] text-foreground">
                     {latestSign ?? "Sin seña estable"}
                     </p>
@@ -417,7 +578,7 @@ export function TranslationExperience() {
                       return (
                         <div key={item.label} className="space-y-2 text-sm text-muted-foreground">
                           <div className="flex items-center justify-between gap-4">
-                            <span className="truncate">{formatDisplay(item.label)}</span>
+                            <span className="truncate">{predictionType === "letter" ? item.label : formatDisplay(item.label)}</span>
                             <span className="tabular-nums">{value}%</span>
                           </div>
                           <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -486,7 +647,7 @@ export function TranslationExperience() {
           <div className="flex shrink-0 gap-2">
             <Button
               onClick={primaryAction}
-              disabled={cameraState === "requesting" || translationState === "connecting"}
+              disabled={cameraState === "requesting" || translationState === "connecting" || (cameraState === "active" && !canUseSelectedMode)}
               className="rounded-full px-5 shadow-none"
             >
               {translationState === "active" ? <Pause className="size-4" /> : <Play className="size-4" />}

@@ -1,4 +1,4 @@
-LABELS: list[str] = [
+WORD_LABELS: list[str] = [
     "hola",
     "buenos_dias",
     "gracias",
@@ -23,3 +23,8 @@ LABELS: list[str] = [
     "talvez",
     "no se",
 ]
+
+ALPHABET_LABELS: list[str] = list("ABCDEFGHIKLMNOPQRSTUVWXY")
+
+# Backwards-compatible alias for older imports inside this package.
+LABELS = WORD_LABELS

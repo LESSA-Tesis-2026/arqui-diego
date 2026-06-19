@@ -1,10 +1,14 @@
+from typing import cast
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.model.preprocessing import holistic_context
+from app.model.schemas import InferenceMode
 from app.model.service import model_service
 
 
 router = APIRouter(tags=["translate"])
+VALID_MODES: set[str] = {"auto", "words", "alphabet"}
 
 
 @router.websocket("/translate/stream")
@@ -40,11 +44,23 @@ async def translate_stream(websocket: WebSocket) -> None:
                     )
                     continue
 
+                requested_mode = message.get("mode", "auto")
+                if requested_mode not in VALID_MODES:
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "status": "modo inválido",
+                            "error": "Expected mode to be auto, words, or alphabet",
+                        }
+                    )
+                    continue
+
                 try:
                     response = model_service.predict_frame(
                         frame_data=message["frame"],
                         session=session,
                         holistic=holistic,
+                        requested_mode=cast(InferenceMode, requested_mode),
                     )
                     await websocket.send_json(response.model_dump())
                 except Exception as exc:

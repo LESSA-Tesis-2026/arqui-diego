@@ -121,3 +121,4 @@ skills-lock.json
 # ─────────────────────────────────────────
 apps/api/.env
 apps/api/artifacts/modelo_señas_lstm.keras
+models/

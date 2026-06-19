@@ -8,7 +8,7 @@ import mediapipe as mp
 import numpy as np
 
 
-SELECTED_FACE_INDICES = [
+WORD_FACE_INDICES = [
     61,
     291,
     0,
@@ -27,9 +27,35 @@ SELECTED_FACE_INDICES = [
     334,
 ]
 
+ALPHABET_FACE_INDICES = [
+    33,
+    133,
+    362,
+    263,
+    1,
+    61,
+    291,
+    199,
+    94,
+    0,
+    11,
+    13,
+    14,
+    15,
+    16,
+    17,
+]
+
 
 @dataclass(frozen=True)
 class FrameExtraction:
+    word_keypoints: np.ndarray
+    alphabet_keypoints: np.ndarray
+    has_hands: bool
+
+
+@dataclass(frozen=True)
+class KeypointExtraction:
     position_keypoints: np.ndarray
     has_hands: bool
 
@@ -52,7 +78,25 @@ def mediapipe_detection(image: np.ndarray, holistic) -> object:
     return holistic.process(image_rgb)
 
 
-def extract_keypoints(results: object, base_feature_length: int) -> FrameExtraction:
+def extract_hybrid_keypoints(results: object, base_feature_length: int) -> FrameExtraction:
+    word = _extract_keypoints_for_face_indices(results, WORD_FACE_INDICES, base_feature_length)
+    alphabet = _extract_keypoints_for_face_indices(results, ALPHABET_FACE_INDICES, base_feature_length)
+    return FrameExtraction(
+        word_keypoints=word.position_keypoints,
+        alphabet_keypoints=alphabet.position_keypoints,
+        has_hands=word.has_hands,
+    )
+
+
+def extract_keypoints(results: object, base_feature_length: int) -> KeypointExtraction:
+    return _extract_keypoints_for_face_indices(results, WORD_FACE_INDICES, base_feature_length)
+
+
+def _extract_keypoints_for_face_indices(
+    results: object,
+    face_indices: list[int],
+    base_feature_length: int,
+) -> KeypointExtraction:
     if results.pose_landmarks:
         anchor_x = results.pose_landmarks.landmark[0].x
         anchor_y = results.pose_landmarks.landmark[0].y
@@ -101,12 +145,12 @@ def extract_keypoints(results: object, base_feature_length: int) -> FrameExtract
                     results.face_landmarks.landmark[i].y - anchor_y,
                     results.face_landmarks.landmark[i].z - anchor_z,
                 ]
-                for i in SELECTED_FACE_INDICES
+                for i in face_indices
             ],
             dtype=np.float32,
         ).flatten()
     else:
-        face = np.zeros(len(SELECTED_FACE_INDICES) * 3, dtype=np.float32)
+        face = np.zeros(len(face_indices) * 3, dtype=np.float32)
 
     position_keypoints = np.concatenate([pose, face, left_hand, right_hand]).astype(np.float32)
     if position_keypoints.shape[0] != base_feature_length:
@@ -114,7 +158,7 @@ def extract_keypoints(results: object, base_feature_length: int) -> FrameExtract
             f"Expected {base_feature_length} position features, got {position_keypoints.shape[0]}"
         )
 
-    return FrameExtraction(
+    return KeypointExtraction(
         position_keypoints=position_keypoints,
         has_hands=bool(results.left_hand_landmarks or results.right_hand_landmarks),
     )
@@ -130,8 +174,6 @@ def build_sequence_features(
     if not use_temporal_features:
         return list(sequence)
 
-    # Mirrors modeloTutorialFtGemini/3_traduccion_tiempo_real.py: compute
-    # velocity and acceleration from the active sliding window before padding.
     delta = np.vstack([sequence[0:1, :], np.diff(sequence, axis=0)]).astype(np.float32)
     features = [sequence, delta]
 
@@ -140,6 +182,16 @@ def build_sequence_features(
         features.append(acceleration)
 
     return list(np.concatenate(features, axis=-1).astype(np.float32))
+
+
+def motion_score(position_sequence: list[np.ndarray], hand_feature_start: int = 180) -> float:
+    if len(position_sequence) < 2:
+        return 0.0
+
+    sequence = np.asarray(position_sequence, dtype=np.float32)
+    delta = np.vstack([sequence[0:1, :], np.diff(sequence, axis=0)]).astype(np.float32)
+    recent_delta = delta[-5:, hand_feature_start:]
+    return float(np.mean(np.abs(recent_delta))) if recent_delta.size else 0.0
 
 
 def pad_sequence(sequence: list[np.ndarray], sequence_length: int, feature_length: int) -> np.ndarray:
