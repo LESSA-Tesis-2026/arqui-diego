@@ -8,7 +8,7 @@ __pycache__/
 *.pyd
 
 # ─────────────────────────────────────────
-#  Entornos virtuales
+#  Virtual environments
 # ─────────────────────────────────────────
 venv/
 .venv/
@@ -21,54 +21,17 @@ env_wsl/
 .env_wsl/
 
 # ─────────────────────────────────────────
-#  Datos de entrenamiento (archivos grandes)
+#  Training data and generated research artifacts
 # ─────────────────────────────────────────
-# Frames capturados por cámara
-modeloTutorial/frame_actions/
-
-# Dataset alfabeto
-modeloAlfabeto/dataset_alfabeto/
-modeloAlfabeto/data_h5_alfabeto/
-modeloAlfabeto/modelo_alfabeto/
-modeloAlfabeto/modelo_alfabeto_v1/
-modeloAlfabeto/modelo_alfabeto_v2/
-modeloAlfabeto/modelo_alfabeto_v3/
-
-# Keypoints / datasets en HDF5
-modeloTutorial/data/keypoints/*.h5
-modeloTutorialFtGemini/data_h5/*.h5
-modeloTutorialFtGemini/data_h5_delvta_v1/*.h5
-modeloTutorialFtGemini/data_h5_v1/*.h5
-modeloTutorialFtGemini/data_h5_v2/*.h5
-modeloTutorialFtGemini/data_unir/*.h5
-
-# videos
-modeloTutorialFtGemini/videos/
-
-# ─────────────────────────────────────────
-#  Modelos entrenados
-# ─────────────────────────────────────────
-modeloTutorial/models/*.keras
-modeloTutorialFtGemini/models/*.keras
-modeloTutorialFtGemini/models/*.h5
-modeloTutorialFtGemini/modelo1/*.keras
-modeloTutorialFtGemini/modelo1/*.h5
-modeloTutorialFtGemini/modelo1/*.png
-modeloTutorialFtGemini/modelo2/*.keras
-modeloTutorialFtGemini/modelo2/*.h5
-modeloTutorialFtGemini/modelo2/*.png
-modeloTutorialFtGemini/modelo3/*.keras
-modeloTutorialFtGemini/modelo3/*.h5
-modeloTutorialFtGemini/modelo3/*.png
-modeloTutorialFtGemini/modelo1_delta/*.keras
-modeloTutorialFtGemini/modelo1_delta/*.h5
-modeloTutorialFtGemini/modelo1_delta/*.png
-modeloTutorialFtGemini/modelo2_delta_full/*
-
-# ─────────────────────────────────────────
-#  Métricas y gráficas generadas
-# ─────────────────────────────────────────
-modeloTutorialFtGemini/metricas_modelo/
+research/alphabet/raw_images/
+research/alphabet/keypoint_datasets/
+research/alphabet/trained_model/
+research/words/keypoint_datasets/
+research/words/data_to_merge/
+research/words/videos/
+research/words/models/
+research/words/metrics/
+research/words/experiments/
 
 # ─────────────────────────────────────────
 #  Jupyter Notebooks (checkpoints)
@@ -77,7 +40,7 @@ modeloTutorialFtGemini/metricas_modelo/
 *.ipynb_checkpoints
 
 # ─────────────────────────────────────────
-#  IDEs y editores
+#  IDEs and editors
 # ─────────────────────────────────────────
 .vscode/
 .idea/
@@ -85,7 +48,7 @@ modeloTutorialFtGemini/metricas_modelo/
 *.swo
 
 # ─────────────────────────────────────────
-#  Sistema operativo
+#  Operating system
 # ─────────────────────────────────────────
 # Windows
 Thumbs.db
@@ -99,22 +62,11 @@ $RECYCLE.BIN/
 .LSOverride
 
 # ─────────────────────────────────────────
-#  Logs y archivos temporales
+#  Logs and temporary files
 # ─────────────────────────────────────────
 *.log
 *.tmp
 *.temp
-
-# ─────────────────────────────────────────
-#  Local Codex / agent tooling
-# ─────────────────────────────────────────
-.agents/skills/fastapi/
-.agents/skills/frontend-design/
-.agents/skills/vercel-react-best-practices/
-.codex/
-.opencode/
-openspec/
-skills-lock.json
 
 # ─────────────────────────────────────────
 #  Local app secrets and generated artifacts

@@ -2,6 +2,23 @@
 
 FastAPI backend for serving the hybrid LESSA-to-Spanish translation models. This app owns the runtime boundary around the trained word `.keras` artifact and optional alphabet `.h5` artifact, then exposes health, model metadata, and live translation streaming endpoints.
 
+## Structure
+
+```text
+app/
+├── api/routes/            HTTP and WebSocket route handlers
+├── core/config.py         Environment-driven settings
+└── lessa/                 LESSA translation domain
+    ├── labels.py          Stable model label ordering
+    ├── preprocessing.py   Frame decoding, MediaPipe, feature vectors
+    ├── runtimes.py        Keras model loading and metadata
+    ├── session.py         Per-WebSocket translation state
+    ├── inference.py       Mode routing, prediction, voting, responses
+    └── schemas.py         Pydantic API/WebSocket schemas
+```
+
+Routes should stay thin. Add model behavior under `app.lessa`, not inside route handlers.
+
 ## Tech
 
 - FastAPI
@@ -9,6 +26,19 @@ FastAPI backend for serving the hybrid LESSA-to-Spanish translation models. This
 - MediaPipe Holistic preprocessing
 - OpenCV frame decoding
 - `uv` for Python environment and dependency management
+
+## Model Contract
+
+The labels in `app/lessa/labels.py` are trained-model contracts. Preserve order and spelling unless a new model artifact is trained with a different contract.
+
+Current word-model input configuration:
+
+- sequence length: `60`
+- base feature length: `306`
+- temporal delta order: `2`
+- final feature length: `918`
+
+The word and alphabet models use different selected face-index orders. Keep those orders stable in `app/lessa/preprocessing.py`.
 
 ## Environment
 
@@ -18,7 +48,7 @@ FastAPI backend for serving the hybrid LESSA-to-Spanish translation models. This
 cp .env.example .env
 ```
 
-`.env` is local-only and should not be committed. Docker does not use a second env example file; Docker-specific values are declared in the root `docker-compose.yml` so they stay next to the container mount that requires them.
+`.env` is local-only. Docker-specific values are declared in the root `docker-compose.yml`.
 
 Important variables:
 
@@ -26,22 +56,15 @@ Important variables:
 - `LESSA_ALPHABET_MODEL_PATH`: path to the optional alphabet `.h5` model artifact. If it is missing, the API still runs and marks Alphabet mode unavailable.
 - `LESSA_CORS_ORIGINS`: JSON list of allowed frontend origins.
 - `LESSA_SEQUENCE_LENGTH`: word model sequence length. Current model expects `60`.
-- `LESSA_WINDOW_SIZE`: active sliding window before padding. Current console inference uses `25` frames.
+- `LESSA_WINDOW_SIZE`: active sliding window before padding. Current runtime uses `25` frames.
 - `LESSA_BASE_FEATURE_LENGTH`: position-only feature length. Current preprocessing uses `306`.
 - `LESSA_USE_TEMPORAL_FEATURES`: current word model expects temporal deltas enabled.
-- `LESSA_TEMPORAL_DELTA_ORDER`: number of temporal derivative groups appended to each position vector. Current word model expects `2`, producing `918` features: positions, first-order deltas, and second-order deltas computed over the active window before padding.
+- `LESSA_TEMPORAL_DELTA_ORDER`: number of temporal derivative groups appended to each position vector.
 - `LESSA_HYBRID_MOTION_THRESHOLD`: Auto mode threshold that routes moving signs to Words and static signs to Alphabet.
-- `LESSA_SETTLE_SECONDS`: seconds the signer must hold/sign before the API starts inference for the current mode. Default is `3.0` to reduce flicker.
-- `LESSA_INFERENCE_INTERVAL_SECONDS`: minimum delay between model inference calls after settling. Default is `0.75` to reduce processing load.
+- `LESSA_SETTLE_SECONDS`: seconds the signer must hold/sign before the API starts inference for the current mode.
+- `LESSA_INFERENCE_INTERVAL_SECONDS`: minimum delay between model inference calls after settling.
 
-For local development, the default `.env.example` points to the repo-root `models/` folder where both runtime artifacts live.
-
-For backend-owned runtime artifacts, copy or mount the models at:
-
-```text
-models/modelo_señas_lstm.keras
-models/modelo_letras.h5
-```
+For local development, the default `.env.example` points to the repo-root `models/` folder.
 
 ## Install
 
@@ -74,7 +97,8 @@ Frame message:
 ```json
 {
   "type": "frame",
-  "frame": "data:image/jpeg;base64,..."
+  "frame": "data:image/jpeg;base64,...",
+  "mode": "auto"
 }
 ```
 
@@ -108,7 +132,7 @@ Typical translation response:
   "alphabet_top": [],
   "has_hands": true,
   "motion_score": 0.012,
-  "status": "traduciendo",
+  "status": "modo palabras",
   "error": null
 }
 ```
