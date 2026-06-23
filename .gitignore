@@ -74,3 +74,14 @@ $RECYCLE.BIN/
 apps/api/.env
 apps/api/artifacts/modelo_señas_lstm.keras
 models/
+
+# Local-only AI/tooling artifacts
+.agents/
+.codex/
+.opencode/
+openspec/
+skills-lock.json
+AGENTS.md
+CLAUDE.md
+**/AGENTS.md
+**/CLAUDE.md
