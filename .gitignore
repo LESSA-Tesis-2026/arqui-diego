@@ -8,36 +8,30 @@ __pycache__/
 *.pyd
 
 # ─────────────────────────────────────────
-#  Entornos virtuales
+#  Virtual environments
 # ─────────────────────────────────────────
 venv/
 .venv/
 env/
 .env/
 ENV/
+venv_wsl/
+.venv_wsl/
+env_wsl/
+.env_wsl/
 
 # ─────────────────────────────────────────
-#  Datos de entrenamiento (archivos grandes)
+#  Training data and generated research artifacts
 # ─────────────────────────────────────────
-# Frames capturados por cámara
-modeloTutorial/frame_actions/
-
-# Keypoints / datasets en HDF5
-modeloTutorial/data/keypoints/*.h5
-modeloTutorialFtGemini/data_h5/*.h5
-
-# ─────────────────────────────────────────
-#  Modelos entrenados
-# ─────────────────────────────────────────
-modeloTutorial/models/*.keras
-modeloTutorialFtGemini/models/*.keras
-modeloTutorialFtGemini/modelo1/*.keras
-modeloTutorialFtGemini/modelo1/*.h5
-
-# ─────────────────────────────────────────
-#  Métricas y gráficas generadas
-# ─────────────────────────────────────────
-modeloTutorialFtGemini/metricas_modelo/
+research/alphabet/raw_images/
+research/alphabet/keypoint_datasets/
+research/alphabet/trained_model/
+research/words/keypoint_datasets/
+research/words/data_to_merge/
+research/words/videos/
+research/words/models/
+research/words/metrics/
+research/words/experiments/
 
 # ─────────────────────────────────────────
 #  Jupyter Notebooks (checkpoints)
@@ -46,7 +40,7 @@ modeloTutorialFtGemini/metricas_modelo/
 *.ipynb_checkpoints
 
 # ─────────────────────────────────────────
-#  IDEs y editores
+#  IDEs and editors
 # ─────────────────────────────────────────
 .vscode/
 .idea/
@@ -54,7 +48,7 @@ modeloTutorialFtGemini/metricas_modelo/
 *.swo
 
 # ─────────────────────────────────────────
-#  Sistema operativo
+#  Operating system
 # ─────────────────────────────────────────
 # Windows
 Thumbs.db
@@ -68,8 +62,15 @@ $RECYCLE.BIN/
 .LSOverride
 
 # ─────────────────────────────────────────
-#  Logs y archivos temporales
+#  Logs and temporary files
 # ─────────────────────────────────────────
 *.log
 *.tmp
 *.temp
+
+# ─────────────────────────────────────────
+#  Local app secrets and generated artifacts
+# ─────────────────────────────────────────
+apps/api/.env
+apps/api/artifacts/modelo_señas_lstm.keras
+models/

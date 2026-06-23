@@ -1,0 +1,21 @@
+# Vision por computadora
+opencv-python==4.8.1.78
+mediapipe==0.10.7
+
+# Machine Learning / Deep Learning
+tensorflow==2.15.0
+keras==2.15.0
+scikit-learn==1.3.2
+
+# Datos y almacenamiento
+numpy==1.24.3
+pandas==2.1.4
+h5py==3.10.0
+
+# Visualizacion
+matplotlib==3.8.2
+seaborn==0.13.1
+
+# Text-to-Speech
+gTTS==2.4.0
+pygame==2.5.2
