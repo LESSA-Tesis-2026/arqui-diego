@@ -1,8 +1,8 @@
-# Architecture
+# Arquitectura
 
-This repository contains the thesis prototype for live LESSA-to-Spanish translation. The runnable product is a browser experience backed by a FastAPI inference service. The research workspaces explain how the model artifacts are produced, but they are not imported by the production apps at runtime.
+Este repositorio contiene el prototipo de tesis para la traducción en vivo de LESSA a español. El producto ejecutable es una experiencia de navegador respaldada por un servicio de inferencia con FastAPI. Los espacios de trabajo de investigación explican cómo se producen los artefactos de modelo, pero no son importados por las aplicaciones de producción en runtime.
 
-## Repository Boundaries
+## Límites del Repositorio
 
 ```text
 apps/api/                 FastAPI model-serving backend
@@ -15,22 +15,22 @@ docs/                     Architecture, delivery, and development docs
 docker-compose.yml        Local full-stack runtime
 ```
 
-The research workspaces use English folder and file names and are model-development assets, not production application packages. The production apps consume trained artifacts through configured model paths instead of importing research scripts.
+Los espacios de trabajo de investigación usan nombres de carpetas y archivos en inglés y son activos de desarrollo de modelos, no paquetes de aplicación de producción. Las aplicaciones de producción consumen los artefactos entrenados a través de rutas de modelo configuradas en lugar de importar scripts de investigación.
 
-## Language Convention
+## Convención de Idioma
 
-The prototype is for LESSA and Spanish speakers, so Spanish-facing domain output is intentional.
+El prototipo es para hablantes de LESSA y español, por lo que la salida de dominio orientada al español es intencional.
 
-| Area | Convention |
+| Área | Convención |
 | --- | --- |
-| Code identifiers, modules, folders, API fields | English |
-| Developer comments and docs | English |
-| User-facing interface copy | Spanish |
-| Model labels and dataset classes | Preserve trained label contract |
+| Identificadores de código, módulos, carpetas, campos de API | Inglés |
+| Comentarios y documentación de desarrollador | Español |
+| Texto de interfaz orientado al usuario | Español |
+| Etiquetas de modelo y clases de dataset | Preservar el contrato de etiquetas entrenadas |
 
-Examples such as `hola`, `buenos_dias`, `mi_nombre_es`, `nada`, and the alphabet classes are model labels. Do not rename or reorder them unless a future model artifact is trained with a new label contract.
+Ejemplos como `hola`, `buenos_dias`, `mi_nombre_es`, `nada` y las clases del alfabeto son etiquetas de modelo. No las renombre ni las reordene a menos que un artefacto de modelo futuro se entrene con un nuevo contrato de etiquetas.
 
-## Runtime Flow
+## Flujo de Runtime
 
 ```text
 Browser camera
@@ -44,16 +44,16 @@ Browser camera
   -> Spanish text and UI feedback
 ```
 
-1. The frontend requests camera permission and previews the stream locally.
-2. While translation is active, frames are throttled and encoded as JPEG data URLs.
-3. The backend receives frame messages over WebSocket.
-4. MediaPipe extracts pose, selected face, and hand landmarks.
-5. The backend builds the exact feature shape expected by the trained model artifacts.
-6. Auto mode routes moving signs to word recognition and static signs to alphabet recognition.
-7. Voting buffers and settling windows reduce flicker and repeated unstable emissions.
-8. The frontend renders Spanish text, current status, prediction confidence, history, and optional browser speech feedback.
+1. El frontend solicita permiso de cámara y previsualiza el stream localmente.
+2. Mientras la traducción está activa, los fotogramas se limitan (throttle) y se codifican como data URLs JPEG.
+3. El backend recibe los mensajes de fotogramas a través de WebSocket.
+4. MediaPipe extrae los puntos de referencia (landmarks) de pose, rostro seleccionado y manos.
+5. El backend construye la forma exacta de características esperada por los artefactos de modelo entrenados.
+6. El modo Auto enruta las señas en movimiento al reconocimiento de palabra y las señas estáticas al reconocimiento de alfabeto.
+7. Los búferes de votación y las ventanas de asentamiento reducen el parpadeo y las emisiones inestables repetidas.
+8. El frontend renderiza el texto en español, el estado actual, la confianza de la predicción, el historial y la retroalimentación de voz opcional del navegador.
 
-## Backend Structure
+## Estructura del Backend
 
 ```text
 apps/api/app/
@@ -67,9 +67,9 @@ apps/api/app/
 └── lessa/schemas.py       Pydantic API/WebSocket schemas
 ```
 
-Routes should remain thin. Put request validation and socket lifecycle in route modules; put model behavior in `app.lessa` modules.
+Las rutas deben permanecer ligeras. Coloque la validación de solicitudes y el ciclo de vida del socket en los módulos de rutas; coloque el comportamiento del modelo en los módulos `app.lessa`.
 
-## Frontend Structure
+## Estructura del Frontend
 
 ```text
 apps/web/src/
@@ -80,41 +80,65 @@ apps/web/src/
 └── lib/labels.ts            Model-label to Spanish-display formatting
 ```
 
-Browser API logic lives in hooks:
+La lógica de la API del navegador vive en los hooks:
 
-- `useCamera`: camera permission, stream ownership, cleanup.
-- `useFrameStreaming`: frame throttling, canvas capture, socket backpressure.
-- `useTranslationSocket`: model availability, socket lifecycle, translation state, reset handling, stable-emission speech.
-- `useSpeechSynthesis`: hydration-safe Web Speech API integration.
+- `useCamera`: permiso de cámara, propiedad del stream, limpieza.
+- `useFrameStreaming`: limitación (throttling) de fotogramas, captura de canvas, backpressure del socket.
+- `useTranslationSocket`: disponibilidad del modelo, ciclo de vida del socket, estado de traducción, manejo de reinicio, voz de emisión estable.
+- `useSpeechSynthesis`: integración de la Web Speech API segura para la hidratación.
 
-Presentation components receive normalized props and should not own low-level browser resources.
+Los componentes de presentación reciben props normalizadas y no deben ser propietarios de recursos del navegador de bajo nivel.
 
-## Model Artifact Contract
+## Contrato de Artefactos de Modelo
 
-Runtime artifacts are loaded from `models/` by default:
+Los artefactos de runtime se cargan desde `models/` de forma predeterminada:
 
 ```text
 models/modelo_señas_lstm.keras
 models/modelo_letras.h5
 ```
 
-These files are intentionally ignored by Git. They can be copied locally or mounted into Docker.
+Estos archivos son intencionalmente ignorados por Git. Pueden copiarse localmente o montarse en Docker.
 
-Important contracts:
+Contratos importantes:
 
-- Word model labels come from `apps/api/app/lessa/labels.py` in exact order.
-- Alphabet model labels are `ABCDEFGHIKLMNOPQRSTUVWXY`; `J` and `Z` are absent because the current alphabet classifier is static-frame based.
-- The current word model expects sequence length `60` and feature length `918`.
-- The base position feature length is `306`.
-- Temporal features append first-order and second-order deltas after position features.
-- Selected face-index order differs between word and alphabet models and must remain stable.
+- Las etiquetas del modelo de palabra provienen de `apps/api/app/lessa/labels.py` en orden exacto.
+- Las etiquetas del modelo de alfabeto son `ABCDEFGHIKLMNOPQRSTUVWXY`; `J` y `Z` están ausentes porque el clasificador de alfabeto actual se basa en fotogramas estáticos.
+- El modelo de palabra actual espera una longitud de secuencia de `60` y una longitud de características de `918`.
+- La longitud de características de posición base es `306`.
+- Las características temporales añaden deltas de primer y segundo orden después de las características de posición.
+- El orden del índice de rostro seleccionado difiere entre los modelos de palabra y alfabeto y debe permanecer estable.
 
-## Generated and Local Files
+## Contrato de características y del modelo
 
-Local/generated artifacts are runtime or machine-specific outputs:
+Esta es la parte más frágil del sistema: los vectores que produce la API en tiempo de ejecución deben coincidir **exactamente** con los que se usaron para entrenar el artefacto. Si no coinciden, el modelo carga sin error pero predice mal. Un desarrollador que continúe este trabajo debe entender estas cifras antes de tocar el preprocesamiento o la configuración.
 
-- `.env` files
-- `.venv`, `node_modules`, `.next`, caches
+**Vector de posición por fotograma (`base_feature_length = 306`).** Se construye en `apps/api/app/lessa/preprocessing.py` concatenando, en este orden:
+
+| Bloque | Puntos × valores | Subtotal | Rango de índices |
+| --- | --- | --- | --- |
+| Pose | 33 × 4 (x, y, z, visibility) | 132 | 0–131 |
+| Rostro seleccionado | 16 × 3 (x, y, z) | 48 | 132–179 |
+| Mano izquierda | 21 × 3 | 63 | 180–242 |
+| Mano derecha | 21 × 3 | 63 | 243–305 |
+| **Total** | | **306** | |
+
+- Todas las coordenadas se anclan restando la posición de la nariz (pose landmark 0), de modo que el modelo aprende movimiento relativo a la persona y no la posición absoluta en la cámara.
+- Las manos empiezan en el índice `180`; por eso `motion_score` mide el movimiento solo a partir de ese offset para decidir el modo en Auto.
+- Los índices de rostro (`WORD_FACE_INDICES` vs `ALPHABET_FACE_INDICES`) difieren entre modelos y deben permanecer estables.
+
+**Características temporales (`feature_length = 918`).** Cuando `use_temporal_features = True` y `temporal_delta_order = 2`, cada fotograma se enriquece concatenando posición + velocidad (1ª derivada) + aceleración (2ª derivada): `306 × (1 + 2) = 918`. Esta transformación se hace en `build_sequence_features` (API) y debe ser idéntica a `compute_deltas` del script de entrenamiento `research/words/train_temporal_model.py`.
+
+**Longitud de secuencia (`sequence_length = 60`) frente a ventana (`window_size = 25`).** El modelo espera secuencias de `60` fotogramas. En vivo, la sesión mantiene una ventana deslizante de solo `25` fotogramas (movimiento reciente) y `pad_sequence` la rellena con ceros hasta `60`; el modelo ignora el relleno gracias a su capa `Masking`.
+
+En resumen, deben mantenerse alineados: los índices de landmarks y su orden, `base_feature_length`, `temporal_delta_order`, `sequence_length`, el orden de etiquetas en `labels.py` y la misma lógica de deltas en API y entrenamiento. Cambiar cualquiera de ellos obliga a reentrenar el modelo.
+
+## Archivos Generados y Locales
+
+Los artefactos locales/generados son salidas de runtime o específicas de la máquina:
+
+- archivos `.env`
+- `.venv`, `node_modules`, `.next`, cachés
 - `apps/web/next-env.d.ts`
-- runtime files under `models/`
-- generated datasets, videos, H5 files, and metrics unless explicitly accepted as thesis evidence
+- archivos de runtime bajo `models/`
+- datasets, videos, archivos H5 y métricas generados, a menos que se acepten explícitamente como evidencia de tesis

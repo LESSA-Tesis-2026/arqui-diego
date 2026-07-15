@@ -28,6 +28,24 @@ from app.lessa.session import HybridTranslationSession
 
 
 class HybridLessaModelService:
+    """Servicio de inferencia híbrido: enruta cada fotograma al modelo de palabras o de alfabeto.
+
+    Es el cerebro del backend. Mantiene los dos runtimes de modelo (carga diferida) y, por cada
+    fotograma, ejecuta esta máquina de estados sobre la sesión de la conexión:
+
+        1. Decodificar el fotograma y extraer landmarks/keypoints (preprocessing).
+        2. Actualizar la ventana deslizante y calcular el puntaje de movimiento.
+        3. Si no hay manos, mantener la última lectura un momento y luego reiniciar (_handle_no_hands).
+        4. Resolver el modo activo: forzado por el cliente, o elegido por movimiento en Auto (_resolve_mode).
+        5. Esperar la ventana de estabilización (settle) antes de la primera inferencia.
+        6. Respetar el intervalo mínimo entre inferencias (throttling).
+        7. Ejecutar el modelo, votar sobre las últimas predicciones y emitir solo etiquetas estables.
+
+    La estabilización (ventana settle + votación + intervalo) es lo que evita que la traducción
+    parpadee con predicciones ruidosas fotograma a fotograma. Todo el estado mutable vive en
+    `HybridTranslationSession`, una por WebSocket, por lo que este servicio no guarda estado por usuario.
+    """
+
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.word_runtime = WordModelRuntime(settings)
@@ -66,6 +84,13 @@ class HybridLessaModelService:
         holistic,
         requested_mode: InferenceMode = "auto",
     ) -> TranslationResponse:
+        """Procesa un fotograma y devuelve el estado de traducción actual.
+
+        Punto de entrada llamado por la ruta WebSocket una vez por fotograma recibido. Devuelve
+        siempre una `TranslationResponse` completa: cuando aún no toca inferir (estabilizando,
+        throttling o sin manos) responde con una respuesta "vacía" que solo lleva estado y mensaje,
+        no una predicción nueva.
+        """
         now = time.monotonic()
         frame = decode_frame(frame_data)
         results = mediapipe_detection(frame, holistic)
@@ -99,8 +124,9 @@ class HybridLessaModelService:
                 session.mode_candidate_since = now
             session.mode_candidate = resolved_mode
 
-        # The settling window trades latency for legibility: it gives the signer time
-        # to hold a shape/motion before expensive inference and UI emission begin.
+        # La ventana de estabilización (settling window) intercambia latencia por legibilidad: le da
+        # tiempo a la persona señante para mantener una forma/movimiento antes de que comiencen la
+        # inferencia costosa y la emisión hacia la interfaz.
         settle_started_at = session.mode_candidate_since or session.hands_detected_since or now
         elapsed_settle = now - settle_started_at
         if elapsed_settle < self.settings.settle_seconds:
@@ -140,6 +166,9 @@ class HybridLessaModelService:
 
         session.last_inference_at = now
 
+        # Al confirmarse un modo durante varios fotogramas (>4) se limpia el búfer de votación del
+        # otro modo. Es una histéresis: evita que letras votadas antes de un cambio a palabras (o
+        # viceversa) contaminen las emisiones del modo nuevo.
         if resolved_mode == "words":
             session.dynamic_frames += 1
             session.static_frames = 0
@@ -177,6 +206,12 @@ class HybridLessaModelService:
         now: float,
         score: float,
     ) -> TranslationResponse:
+        """Gestiona los fotogramas sin manos detectadas.
+
+        Durante `hold_last_reading_seconds` se conserva la última lectura para tolerar pérdidas
+        breves de tracking de MediaPipe. Superado ese margen, reinicia los búferes y el estado de
+        modo, y tras `pause_reset_frames` fotogramas seguidos marca la salida como "nada"/"-".
+        """
         session.nada_counter += 1
         hold_elapsed = (
             now - session.last_hands_seen_at
@@ -220,6 +255,12 @@ class HybridLessaModelService:
         session: HybridTranslationSession,
         score: float,
     ) -> ResolvedMode:
+        """Decide qué modelo usar en este fotograma.
+
+        Si el cliente fuerza un modo, se respeta. En Auto se necesita primero llenar la ventana
+        (`window_size`) para tener un puntaje de movimiento fiable; luego el movimiento elige el
+        modo preferido y se recurre al alternativo si el modelo preferido no está cargado.
+        """
         if requested_mode == "words":
             return "words"
         if requested_mode == "alphabet":
@@ -228,8 +269,9 @@ class HybridLessaModelService:
         if len(session.word_sequence) < self.settings.window_size:
             return "none"
 
-        # Auto mode uses recent hand motion to choose dynamic word recognition or
-        # static alphabet recognition, then falls back if the preferred model is absent.
+        # El modo Auto usa el movimiento reciente de las manos para elegir el reconocimiento dinámico
+        # de palabras o el reconocimiento estático de alfabeto, y luego recurre a la alternativa si el
+        # modelo preferido no está presente.
         preferred: ResolvedMode = (
             "words" if score > self.settings.hybrid_motion_threshold else "alphabet"
         )
@@ -424,6 +466,12 @@ class HybridLessaModelService:
 
     @staticmethod
     def _stable_vote(buffer: collections.deque[str], minimum_votes: int, fallback: str) -> str:
+        """Votación por mayoría sobre el búfer de predicciones recientes.
+
+        Devuelve la etiqueta más frecuente solo si aparece al menos `minimum_votes` veces; si no,
+        devuelve `fallback` ("nada" o "-"). Es el filtro que convierte predicciones ruidosas
+        fotograma a fotograma en una emisión estable.
+        """
         if not buffer:
             return fallback
         most_common, count = collections.Counter(buffer).most_common(1)[0]

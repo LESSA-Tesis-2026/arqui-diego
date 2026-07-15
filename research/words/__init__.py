@@ -1,1 +1,1 @@
-"""Word and phrase model-development workspace."""
+"""Espacio de trabajo de desarrollo del modelo de palabras y frases."""

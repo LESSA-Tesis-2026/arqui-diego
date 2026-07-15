@@ -1,8 +1,8 @@
-# Research Workspaces
+# Espacios de trabajo de investigación
 
-`research/` contains the model-development workflows that produce the runtime artifacts served by the LESSA prototype. The application code in `apps/api` and `apps/web` does not import these scripts directly; it consumes trained model files through the configured runtime paths.
+`research/` contiene los flujos de desarrollo de modelos que producen los artefactos de ejecución que sirve el prototipo de LESSA. El código de la aplicación en `apps/api` y `apps/web` no importa estos scripts directamente; consume los archivos de modelos entrenados a través de las rutas de ejecución configuradas.
 
-## Workspace map
+## Mapa del espacio de trabajo
 
 ```text
 research/
@@ -11,32 +11,32 @@ research/
 └── prototypes/  OpenCV-only integration experiments for manual research checks
 ```
 
-## Naming and language conventions
+## Convenciones de nomenclatura e idioma
 
-- Python filenames describe the action they perform: `collect_*`, `extract_*`, `train_*`, `run_*`.
-- README workflow sections define the execution order instead of relying on numeric filename prefixes.
-- Python identifiers, comments, and developer documentation are in English.
-- LESSA labels remain in the language and order used by the trained models. Labels such as `hola`, `buenos_dias`, `mucho_gusto`, and `nada` are data/model contracts, not developer-facing names.
+- Los nombres de archivo de Python describen la acción que realizan: `collect_*`, `extract_*`, `train_*`, `run_*`.
+- Las secciones de flujo de trabajo del README definen el orden de ejecución en lugar de depender de prefijos numéricos en los nombres de archivo.
+- Los identificadores de Python se mantienen en inglés; los comentarios y la documentación para desarrolladores están en español.
+- Las etiquetas de LESSA se conservan en el idioma y el orden que usan los modelos entrenados. Etiquetas como `hola`, `buenos_dias`, `mucho_gusto` y `nada` son contratos de datos/modelo, no nombres orientados al desarrollador.
 
-## Generated artifact policy
+## Política de artefactos generados
 
-Research runs create large or machine-specific files. These are local outputs, not source files:
+Las ejecuciones de investigación crean archivos grandes o específicos de la máquina. Estos son salidas locales, no archivos fuente:
 
-- raw webcam images and videos
-- H5 keypoint datasets
-- trained `.keras` and `.h5` models
-- generated metrics, charts, and reports
-- local Python virtual environments
-- OS/editor caches
+- imágenes y videos de webcam sin procesar
+- datasets de keypoints en H5
+- modelos entrenados `.keras` y `.h5`
+- métricas, gráficas y reportes generados
+- entornos virtuales locales de Python
+- cachés del sistema operativo o del editor
 
-When a trained artifact is ready for the application, copy it into the repository-root `models/` folder for local runtime or Docker mounting. Keep source changes and generated artifacts separate so reviewers can understand the prototype without receiving machine-local outputs.
+Cuando un artefacto entrenado esté listo para la aplicación, cópielo en la carpeta `models/` en la raíz del repositorio para la ejecución local o para el montaje con Docker. Mantenga separados los cambios de código fuente y los artefactos generados para que quienes revisen puedan entender el prototipo sin recibir salidas locales de la máquina.
 
-## Common research flow
+## Flujo de investigación común
 
-1. Collect raw samples or direct H5 sequences.
-2. Extract MediaPipe keypoints into H5 datasets when starting from raw media.
-3. Train the model for the selected pipeline.
-4. Smoke-test the model with the OpenCV demo script.
-5. Copy the validated model artifact to the root `models/` folder and run the app through `apps/api` + `apps/web`.
+1. Recolecte muestras sin procesar o secuencias H5 directas.
+2. Extraiga los keypoints de MediaPipe a datasets H5 cuando parta de medios sin procesar.
+3. Entrene el modelo para el pipeline seleccionado.
+4. Realice una prueba rápida (smoke-test) del modelo con el script de demo de OpenCV.
+5. Copie el artefacto de modelo validado a la carpeta `models/` en la raíz y ejecute la aplicación a través de `apps/api` + `apps/web`.
 
-See `research/words/README.md` and `research/alphabet/README.md` for exact commands and artifact locations. See `research/DEVELOPER_NOTES.md` for the model-contract and real-time smoothing decisions that future work must preserve.
+Consulte `research/words/README.md` y `research/alphabet/README.md` para los comandos exactos y las ubicaciones de los artefactos. Consulte `research/DEVELOPER_NOTES.md` para las decisiones sobre el contrato del modelo y el suavizado en tiempo real que el trabajo futuro debe preservar.

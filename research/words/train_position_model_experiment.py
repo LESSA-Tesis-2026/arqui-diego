@@ -1,7 +1,7 @@
-"""Train a position-only word/phrase experiment for comparison.
+"""Entrena un experimento de palabras/frases solo de posición para comparación.
 
-This script is useful when debugging the baseline 306-feature landmark contract.
-The active runtime model is trained by `train_temporal_model.py`.
+Este script es útil al depurar el contrato de landmarks base de 306 características.
+El modelo de ejecución activo se entrena con `train_temporal_model.py`.
 """
 
 import os
@@ -20,7 +20,7 @@ from tensorflow.keras.optimizers import AdamW
 from tensorflow.keras.regularizers import l2
 from word_config import *
 
-# Enable dynamic GPU memory growth so TensorFlow does not reserve all GPU memory up front.
+# Habilita el crecimiento dinámico de memoria de GPU para que TensorFlow no reserve toda la memoria de GPU de antemano.
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -30,37 +30,37 @@ if gpus:
         print(e)
 
 def data_augmentation(X_train, y_train):
-    """Create conservative training-only variants of each captured sequence.
+    """Crea variantes conservadoras, solo de entrenamiento, de cada secuencia capturada.
 
-    The noise levels are intentionally small because features are already normalized
-    relative to the nose; large perturbations would create unrealistic signing motion."""
+    Los niveles de ruido son intencionalmente pequeños porque las características ya están normalizadas
+    con respecto a la nariz; perturbaciones grandes crearían un movimiento de seña poco realista."""
     aug_sequences, aug_labels = [], []
     for seq, label in zip(X_train, y_train):
-        # 1. Original sequence kept intact.
+        # 1. La secuencia original se mantiene intacta.
         aug_sequences.append(seq)
         aug_labels.append(label)
 
-        # 2. Microscopic noise that simulates millimetric camera shake.
-        # Keep the deviation low because nose-relative distances are small.
+        # 2. Ruido microscópico que simula un temblor milimétrico de la cámara.
+        # Mantén la desviación baja porque las distancias relativas a la nariz son pequeñas.
         noise_1 = np.random.normal(0, 0.002, seq.shape)
-        # Preserve pose visibility channels, assuming the first 132 values belong to pose.
-        # This prevents noise from corrupting visibility values.
+        # Preserva los canales de visibilidad de la pose, asumiendo que los primeros 132 valores pertenecen a la pose.
+        # Esto evita que el ruido corrompa los valores de visibilidad.
         aug_seq_1 = seq + noise_1
-        aug_seq_1[:, 3::4] = seq[:, 3::4] # Restore original visibility values.
+        aug_seq_1[:, 3::4] = seq[:, 3::4] # Restaura los valores de visibilidad originales.
         aug_sequences.append(aug_seq_1)
         aug_labels.append(label)
 
-        # 3. Light noise that simulates natural human signing variation.
+        # 3. Ruido ligero que simula la variación humana natural al señar.
         noise_2 = np.random.normal(0, 0.004, seq.shape)
         aug_seq_2 = seq + noise_2
-        aug_seq_2[:, 3::4] = seq[:, 3::4] # Restore original visibility values.
+        aug_seq_2[:, 3::4] = seq[:, 3::4] # Restaura los valores de visibilidad originales.
         aug_sequences.append(aug_seq_2)
         aug_labels.append(label)
 
     return aug_sequences, aug_labels
 
 def load_raw_data_from_h5():
-    """Load variable-length position-only sequences and integer labels from per-word H5 files."""
+    """Carga secuencias solo de posición de longitud variable y etiquetas enteras desde archivos H5 por palabra."""
     sequences, labels = [], []
     for label, word in enumerate(WORDS):
         file_path = os.path.join(DATA_PATH, f"{word}.h5")
@@ -75,39 +75,39 @@ def load_raw_data_from_h5():
     return sequences, labels
 
 def build_model():
-    """Build the position-only recurrent baseline used for comparison with temporal features."""
+    """Construye la línea base recurrente solo de posición usada para comparar con las características temporales."""
     model = Sequential([
 
-        # Masking tells the recurrent layers to ignore zero-padded frames.
+        # El masking le indica a las capas recurrentes que ignoren los fotogramas rellenados con ceros.
         Masking(mask_value=0.0, input_shape=(MAX_FRAMES, LENGTH_KEYPOINTS)),
 
-        # SpatialDropout drops whole feature channels, which discourages reliance on one coordinate.
+        # SpatialDropout descarta canales de características completos, lo que desincentiva depender de una sola coordenada.
         SpatialDropout1D(0.2),
 
-                # - Bidirectional LSTM: reads the sequence forward and backward, which helps capture
-        # temporal dependencies in both directions. When two signs have similar starts or endings,
-        # the complete sequence context helps separate them.
-        # - L2: penalizes large weights, reducing overfitting.
-        # - Dropout: disables random neurons during training so the network does not depend
-        # too strongly on a small subset of features.
+                # - LSTM bidireccional: lee la secuencia hacia adelante y hacia atrás, lo que ayuda a capturar
+        # dependencias temporales en ambas direcciones. Cuando dos señas tienen inicios o finales similares,
+        # el contexto completo de la secuencia ayuda a separarlas.
+        # - L2: penaliza los pesos grandes, reduciendo el sobreajuste.
+        # - Dropout: desactiva neuronas aleatorias durante el entrenamiento para que la red no dependa
+        # demasiado de un pequeño subconjunto de características.
 
         Bidirectional(LSTM(64, return_sequences=True, activation='tanh', kernel_regularizer=l2(0.0005))),
-        Dropout(0.3), # Higher dropout helps fight overfitting.
+        Dropout(0.3), # Un dropout más alto ayuda a combatir el sobreajuste.
 
         Bidirectional(LSTM(32, return_sequences=False, activation='tanh', kernel_regularizer=l2(0.0005))),
-        Dropout(0.3), # Higher dropout helps fight overfitting.
+        Dropout(0.3), # Un dropout más alto ayuda a combatir el sobreajuste.
 
-        # Dense condensation layer.
+        # Capa densa de condensación.
 
-        # - Dense ReLU: introduces non-linearity and condenses the temporal information
-        # extracted by the LSTMs into simpler logical features.
-        # - Dense softmax: multiclass output layer that converts logits into probabilities.
+        # - Dense ReLU: introduce no linealidad y condensa la información temporal
+        # extraída por las LSTM en características lógicas más simples.
+        # - Dense softmax: capa de salida multiclase que convierte los logits en probabilidades.
 
         Dense(32, activation='relu', kernel_regularizer=l2(0.001)),
         Dense(len(WORDS), activation='softmax')
     ])
 
-    # Slightly reduce weight decay to balance the added L2 penalty.
+    # Reduce ligeramente el weight decay para equilibrar la penalización L2 añadida.
     optimizer = AdamW(learning_rate=0.0005, weight_decay=0.0005)
     model.compile(
         optimizer=optimizer,
@@ -117,7 +117,7 @@ def build_model():
     return model
 
 def plot_metrics(history, y_true, y_pred_classes):
-    """Write training curves and a normalized confusion matrix for experiment review."""
+    """Escribe las curvas de entrenamiento y una matriz de confusión normalizada para la revisión del experimento."""
     create_folder_if_not_exists(METRICS_FOLDER)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     X_raw, y_raw = load_raw_data_from_h5()
     print(f"Total captured real samples: {len(X_raw)}")
 
-    # 80/20 split; keep this pre-delta experiment without a test set until each word has enough samples.
+    # División 80/20; mantén este experimento previo a los deltas sin conjunto de prueba hasta que cada palabra tenga suficientes muestras.
     X_train_raw, X_val_raw, y_train_raw, y_val_raw = train_test_split(
         X_raw, y_raw, test_size=0.2, random_state=42, stratify=y_raw
     )
@@ -172,10 +172,10 @@ if __name__ == "__main__":
     checkpoint = ModelCheckpoint(MODEL_PATH, monitor='val_accuracy', save_best_only=True)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001, verbose=1)
 
-    # - batch_size: number of videos seen before each gradient update; larger values can
-    # stabilize gradients and use the GPU better, but require more memory.
-    # - epochs: more passes give the model more learning chances but increase overfitting risk.
-    # - EarlyStopping: stops training automatically when validation loss stops improving.
+    # - batch_size: número de videos vistos antes de cada actualización de gradiente; valores más grandes pueden
+    # estabilizar los gradientes y usar mejor la GPU, pero requieren más memoria.
+    # - epochs: más pasadas le dan al modelo más oportunidades de aprender, pero aumentan el riesgo de sobreajuste.
+    # - EarlyStopping: detiene el entrenamiento automáticamente cuando la pérdida de validación deja de mejorar.
 
     history = model.fit(
         X_train, y_train,
@@ -194,16 +194,16 @@ if __name__ == "__main__":
 
     plot_metrics(history, y_true, y_pred_classes)
 
-# Future model-extension notes:
-# - Add Conv1D blocks before the recurrent layers when the vocabulary grows. They can
-#   extract short-term motion patterns, such as sudden hand acceleration or quick
-#   finger closures, before the LSTM models the longer sequence.
-# - Add LayerNormalization for larger models. It stabilizes activations frame by frame
-#   and helps deeper networks train without exploding or vanishing gradients.
-# - Evaluate attention or self-attention when signs include long neutral segments.
-#   Attention can learn which frames carry the most discriminative hand shape or motion.
-# - Expand data augmentation only on training data. Candidate techniques include time
-#   reversal, hand swapping, and synthetic sequence generation; validation and test sets
-#   must stay untouched to measure real generalization.
-# - Consider residual connections for deeper Conv1D/LSTM stacks so later layers can
-#   still access the original landmark-position signal.
+# Notas de extensión futura del modelo:
+# - Agregar bloques Conv1D antes de las capas recurrentes cuando el vocabulario crezca. Pueden
+#   extraer patrones de movimiento de corto plazo, como una aceleración repentina de la mano o cierres
+#   rápidos de los dedos, antes de que la LSTM modele la secuencia más larga.
+# - Agregar LayerNormalization para modelos más grandes. Estabiliza las activaciones fotograma por fotograma
+#   y ayuda a que redes más profundas se entrenen sin gradientes que explotan o se desvanecen.
+# - Evaluar attention o self-attention cuando las señas incluyan segmentos neutros largos.
+#   La atención puede aprender qué fotogramas portan la forma o el movimiento de mano más discriminativo.
+# - Ampliar la aumentación de datos solo en los datos de entrenamiento. Las técnicas candidatas incluyen la
+#   inversión temporal, el intercambio de manos y la generación sintética de secuencias; los conjuntos de validación y prueba
+#   deben permanecer sin modificar para medir la generalización real.
+# - Considerar conexiones residuales para pilas Conv1D/LSTM más profundas para que las capas posteriores puedan
+#   seguir accediendo a la señal original de posición de los landmarks.

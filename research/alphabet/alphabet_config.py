@@ -1,6 +1,6 @@
-"""Shared constants and MediaPipe helpers for the alphabet research pipeline.
+"""Constantes compartidas y ayudantes de MediaPipe para el pipeline de investigación del alfabeto.
 
-The alphabet label order must stay aligned with `modelo_letras.h5`.
+El orden de las etiquetas del alfabeto debe mantenerse alineado con `modelo_letras.h5`.
 """
 
 import os
@@ -9,10 +9,10 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
-# Static alphabet labels. J and Z are intentionally absent because those LESSA signs usually require motion.
+# Etiquetas del alfabeto estático. J y Z están ausentes intencionalmente porque esas señas de LESSA normalmente requieren movimiento.
 ALPHABET = list("ABCDEFGHIKLMNOPQRSTUVWXY")
 
-# Workspace paths. Generated data/model folders are ignored by Git.
+# Rutas del espacio de trabajo. Las carpetas de datos/modelos generados son ignoradas por Git.
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 DATASET_FOLDER = os.path.join(ROOT_PATH, "raw_images")
 DATA_H5_FOLDER = os.path.join(ROOT_PATH, "keypoint_datasets")
@@ -20,22 +20,22 @@ MODEL_FOLDER = os.path.join(ROOT_PATH, "trained_model")
 METRICS_FOLDER = os.path.join(MODEL_FOLDER, "metrics")
 MODEL_PATH = os.path.join(MODEL_FOLDER, "modelo_letras.h5")
 
-# Alphabet model face landmarks differ from the word model; keep this order stable for artifact compatibility.
+# Los landmarks de rostro del modelo del alfabeto difieren de los del modelo de palabras; mantenga este orden estable por compatibilidad de artefactos.
 SELECTED_FACE_INDICES = [33, 133, 362, 263, 1, 61, 291, 199, 94, 0, 11, 13, 14, 15, 16, 17]
 LENGTH_KEYPOINTS = 306  # 132 pose + 48 selected face + 63 left hand + 63 right hand.
 
 
 def create_folder_if_not_exists(folder_path):
-    """Create a workspace folder when a script is about to write generated research output."""
+    """Crea una carpeta del espacio de trabajo cuando un script está por escribir salidas de investigación generadas."""
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
 
 def mediapipe_detection(image, model):
-    """Run one OpenCV frame through a MediaPipe model and return BGR output plus landmarks.
+    """Procesa un fotograma de OpenCV a través de un modelo de MediaPipe y devuelve la salida BGR más los landmarks.
 
-    OpenCV uses BGR and MediaPipe uses RGB, so this helper centralizes the color-space
-    conversion for all alphabet research scripts."""
+    OpenCV usa BGR y MediaPipe usa RGB, así que este ayudante centraliza la conversión de
+    espacio de color para todos los scripts de investigación del alfabeto."""
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_rgb.flags.writeable = False
     results = model.process(image_rgb)
@@ -44,7 +44,7 @@ def mediapipe_detection(image, model):
 
 
 def extract_keypoints(results):
-    """Extract the 306-value nose-anchored feature vector used by the static alphabet model."""
+    """Extrae el vector de características de 306 valores anclado en la nariz que usa el modelo del alfabeto estático."""
     if results.pose_landmarks:
         anchor_x = results.pose_landmarks.landmark[0].x
         anchor_y = results.pose_landmarks.landmark[0].y

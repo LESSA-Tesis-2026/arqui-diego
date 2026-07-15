@@ -1,3 +1,25 @@
+"""Preprocesamiento de fotogramas a vectores de características para los modelos LESSA.
+
+Este módulo es el puente entre el fotograma crudo de la cámara y la entrada numérica que
+esperan los modelos entrenados. El flujo por fotograma es:
+
+    JPEG base64 -> decode_frame -> BGR ndarray
+                -> mediapipe_detection -> landmarks Holistic (pose, rostro, manos)
+                -> extract_hybrid_keypoints -> vector de posición de 306 valores
+                -> build_sequence_features -> secuencia con velocidad/aceleración (918 por fotograma)
+                -> pad_sequence -> tensor (1, sequence_length, feature_length)
+
+Contrato de posición (306 valores por fotograma), en este orden exacto de concatenación:
+    pose (33 x 4: x, y, z, visibility) = 132
+    rostro seleccionado (16 x 3: x, y, z) = 48
+    mano izquierda (21 x 3) = 63
+    mano derecha (21 x 3) = 63
+    total = 306
+
+Cambiar el orden, la cantidad de puntos o los índices de rostro rompe la compatibilidad con
+los artefactos entrenados. Ver `docs/ARCHITECTURE.md` (sección del contrato de características).
+"""
+
 from __future__ import annotations
 
 import base64
@@ -8,8 +30,8 @@ import mediapipe as mp
 import numpy as np
 
 
-# The word and alphabet models were trained with different 16-point face subsets.
-# Keep these orders stable: the feature vector position is part of the model input contract.
+# Los modelos de palabras y de alfabeto se entrenaron con diferentes subconjuntos de rostro de 16 puntos.
+# Mantenga estos órdenes estables: la posición en el vector de características es parte del contrato de entrada del modelo.
 WORD_FACE_INDICES = [
     61,
     291,
@@ -63,6 +85,11 @@ class KeypointExtraction:
 
 
 def decode_frame(frame_data: str) -> np.ndarray:
+    """Decodifica un fotograma JPEG en base64 (data URL o base64 puro) a un ndarray BGR de OpenCV.
+
+    El navegador envía cada fotograma como data URL (`data:image/jpeg;base64,...`); se descarta el
+    prefijo antes de la coma. Lanza ValueError si el payload no es una imagen válida.
+    """
     if "," in frame_data:
         frame_data = frame_data.split(",", 1)[1]
 
@@ -75,12 +102,23 @@ def decode_frame(frame_data: str) -> np.ndarray:
 
 
 def mediapipe_detection(image: np.ndarray, holistic) -> object:
+    """Ejecuta MediaPipe Holistic sobre un fotograma BGR y devuelve los landmarks detectados.
+
+    OpenCV entrega fotogramas en BGR, pero MediaPipe espera RGB. La bandera `writeable=False`
+    permite a MediaPipe evitar una copia interna del arreglo mientras procesa la imagen.
+    """
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_rgb.flags.writeable = False
     return holistic.process(image_rgb)
 
 
 def extract_hybrid_keypoints(results: object, base_feature_length: int) -> FrameExtraction:
+    """Construye ambos vectores de posición (palabras y alfabeto) a partir de un mismo resultado.
+
+    Los dos modelos comparten pose y manos pero usan subconjuntos de rostro distintos, por eso se
+    extrae una vez por cada juego de índices. `has_hands` se toma del vector de palabras porque la
+    detección de manos es idéntica entre ambos.
+    """
     word = _extract_keypoints_for_face_indices(results, WORD_FACE_INDICES, base_feature_length)
     alphabet = _extract_keypoints_for_face_indices(results, ALPHABET_FACE_INDICES, base_feature_length)
     return FrameExtraction(
@@ -99,8 +137,15 @@ def _extract_keypoints_for_face_indices(
     face_indices: list[int],
     base_feature_length: int,
 ) -> KeypointExtraction:
-    # All coordinates are anchored to the nose landmark so model inputs represent
-    # signer-relative movement instead of absolute webcam position.
+    """Aplana los landmarks a un vector de posición de `base_feature_length` valores.
+
+    Los landmarks faltantes (por ejemplo, una mano fuera de cuadro) se rellenan con ceros para
+    conservar siempre el mismo tamaño de vector. Al final valida que la longitud coincida con el
+    contrato del modelo y lanza ValueError si no es así, lo que suele indicar un cambio de índices.
+    """
+    # Todas las coordenadas se anclan al punto de referencia (landmark) de la nariz para que las
+    # entradas del modelo representen el movimiento relativo a la persona señante en lugar de la
+    # posición absoluta en la webcam.
     if results.pose_landmarks:
         anchor_x = results.pose_landmarks.landmark[0].x
         anchor_y = results.pose_landmarks.landmark[0].y
@@ -173,14 +218,22 @@ def build_sequence_features(
     use_temporal_features: bool,
     temporal_delta_order: int,
 ) -> list[np.ndarray]:
+    """Enriquece una secuencia de posiciones con velocidad y aceleración por fotograma.
+
+    Debe reproducir exactamente `compute_deltas` del script de entrenamiento
+    (research/words/train_temporal_model.py): posición (306) + velocidad (306) + aceleración (306)
+    = 918 valores por fotograma. Si difiere del entrenamiento, el modelo recibe una entrada
+    inconsistente. Sin características temporales devuelve solo las posiciones.
+    """
     sequence = np.asarray(position_sequence, dtype=np.float32)
 
     if not use_temporal_features:
         return list(sequence)
 
-    # The word model expects positions plus first- and optional second-order deltas
-    # in this exact concatenation order. Padding happens after deltas so the active
-    # movement window produces the same 918-feature shape used during training.
+    # El modelo de palabras espera las posiciones más los deltas de primer orden y, opcionalmente,
+    # de segundo orden en este orden exacto de concatenación. El relleno ocurre después de los deltas
+    # para que la ventana de movimiento activo produzca la misma forma de 918 características usada
+    # durante el entrenamiento.
     delta = np.vstack([sequence[0:1, :], np.diff(sequence, axis=0)]).astype(np.float32)
     features = [sequence, delta]
 
@@ -192,6 +245,13 @@ def build_sequence_features(
 
 
 def motion_score(position_sequence: list[np.ndarray], hand_feature_start: int = 180) -> float:
+    """Mide el movimiento reciente de las manos para enrutar entre palabras y alfabeto en modo Auto.
+
+    `hand_feature_start=180` es el índice donde empiezan las características de las manos dentro del
+    vector de 306: pose (33 x 4 = 132) + rostro (16 x 3 = 48) = 180. Se ignoran pose y rostro para
+    que el puntaje refleje solo el movimiento de las manos. Devuelve el promedio del valor absoluto
+    de las diferencias de los últimos fotogramas: alto = seña dinámica, bajo = seña estática.
+    """
     if len(position_sequence) < 2:
         return 0.0
 
@@ -202,6 +262,12 @@ def motion_score(position_sequence: list[np.ndarray], hand_feature_start: int = 
 
 
 def pad_sequence(sequence: list[np.ndarray], sequence_length: int, feature_length: int) -> np.ndarray:
+    """Rellena (o trunca) la secuencia a la forma fija (1, sequence_length, feature_length).
+
+    La LSTM espera siempre `sequence_length` fotogramas. Las secuencias más cortas se rellenan con
+    ceros al final (el modelo usa una capa Masking para ignorarlos); las más largas se truncan. Se
+    añade una dimensión de batch al frente para llamar directamente a `model.predict`.
+    """
     padded = np.zeros((sequence_length, feature_length), dtype=np.float32)
     usable = sequence[:sequence_length]
     if usable:
@@ -210,6 +276,12 @@ def pad_sequence(sequence: list[np.ndarray], sequence_length: int, feature_lengt
 
 
 def holistic_context():
+    """Crea una instancia de MediaPipe Holistic para usar como context manager por conexión.
+
+    Holistic mantiene recursos nativos; conviene crear una instancia por WebSocket y cerrarla al
+    desconectar (ver la ruta translate). Los umbrales de 0.5 equilibran detección y estabilidad
+    del tracking para uso con webcam.
+    """
     return mp.solutions.holistic.Holistic(
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5,

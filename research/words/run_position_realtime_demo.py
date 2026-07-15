@@ -1,4 +1,4 @@
-"""Run an OpenCV smoke test for the position-only word/phrase experiment."""
+"""Ejecuta una prueba rápida (smoke test) de OpenCV para el experimento de palabras/frases solo de posición."""
 
 import cv2
 import numpy as np
@@ -9,8 +9,8 @@ import collections
 from word_config import *
 
 def draw_keypoints(image, results):
-    """Draw MediaPipe pose and hand landmarks for the OpenCV smoke-test preview."""
-    # Use MediaPipe's standard drawing helper for the live interface.
+    """Dibuja los landmarks de pose y manos de MediaPipe para la vista previa de prueba rápida (smoke-test) de OpenCV."""
+    # Usa el ayudante de dibujo estándar de MediaPipe para la interfaz en vivo.
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
     if results.pose_landmarks:
@@ -21,26 +21,26 @@ def draw_keypoints(image, results):
         mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
 def real_time_translation(threshold=0.75):
-    """Run the position-only word/phrase model against live webcam frames.
+    """Ejecuta el modelo de palabras/frases solo de posición sobre fotogramas de webcam en vivo.
 
-    This demo keeps a shorter live window and pads it to the trained 60-frame shape so
-    latency stays acceptable while preserving the model input contract."""
+    Este demo mantiene una ventana en vivo más corta y la rellena hasta la forma entrenada de 60 fotogramas para que
+    la latencia se mantenga aceptable preservando el contrato de entrada del modelo."""
     model = load_model(MODEL_PATH)
     mp_holistic = mp.solutions.holistic
 
-    # 1. Continuous-sign parameters; tune these to match signer speed.
-    WINDOW_SIZE = 40           # Sliding-window size, roughly one second of video.
-    VOTING_BUFFER_SIZE = 15    # Recent predictions used for smoothing.
-    MIN_VOTES = 10             # Votes required before confirming a word.
+    # 1. Parámetros de seña continua; ajústalos para que coincidan con la velocidad del señante.
+    WINDOW_SIZE = 40           # Tamaño de la ventana deslizante, aproximadamente un segundo de video.
+    VOTING_BUFFER_SIZE = 15    # Predicciones recientes usadas para el suavizado.
+    MIN_VOTES = 10             # Votos requeridos antes de confirmar una palabra.
 
-    # 2. Continuous rolling state.
+    # 2. Estado deslizante continuo.
     sequence = collections.deque(maxlen=WINDOW_SIZE)
     predictions_buffer = collections.deque(maxlen=VOTING_BUFFER_SIZE)
 
-    # 3. State machine
+    # 3. Máquina de estados
     sentence = []
     last_emitted_word = "nada"
-    rest_counter = 0           # Counts how long the model has remained in the rest state.
+    rest_counter = 0           # Cuenta cuánto tiempo ha permanecido el modelo en el estado de reposo.
     current_probs = np.zeros(len(WORDS))
 
     cap = cv2.VideoCapture(0)
@@ -53,19 +53,19 @@ def real_time_translation(threshold=0.75):
             image, results = mediapipe_detection(frame, holistic)
             draw_keypoints(image, results)
 
-            # --- PHASE 1: EXTRACTION AND SLIDING WINDOW ---
+            # --- FASE 1: EXTRACCIÓN Y VENTANA DESLIZANTE ---
             if results.left_hand_landmarks or results.right_hand_landmarks:
-                # Reuse the shared config helper that normalizes landmarks relative to the nose.
+                # Reutiliza el ayudante de configuración compartido que normaliza los landmarks con respecto a la nariz.
                 keypoints = extract_keypoints(results)
                 sequence.append(keypoints)
             else:
-                # Inject zeros when hands leave the frame so real-time flow remains stable.
+                # Inyecta ceros cuando las manos salen del fotograma para que el flujo en tiempo real se mantenga estable.
                 sequence.append(np.zeros(LENGTH_KEYPOINTS))
 
-            # --- PHASE 2: CONTINUOUS PREDICTION ---
+            # --- FASE 2: PREDICCIÓN CONTINUA ---
             if len(sequence) == WINDOW_SIZE:
-                # The model expects MAX_FRAMES (60), so pad the shorter live window with zeros.
-                # The Masking layer ignores this mathematical padding.
+                # El modelo espera MAX_FRAMES (60), así que rellena con ceros la ventana en vivo más corta.
+                # La capa de Masking ignora este relleno matemático.
                 pad_seq = pad_sequences([list(sequence)], maxlen=MAX_FRAMES, padding='post', dtype='float32')
 
                 res = model.predict(pad_seq, verbose=0)[0]
@@ -77,11 +77,11 @@ def real_time_translation(threshold=0.75):
                 else:
                     current_word = "nada"
 
-                # Add the prediction to the voting buffer.
+                # Agrega la predicción al búfer de votación.
                 predictions_buffer.append(current_word)
 
-                # --- PHASE 3: SMOOTHING AND TRANSITION LOGIC ---
-                # Confirm the most repeated word in the recent voting window.
+                # --- FASE 3: LÓGICA DE SUAVIZADO Y TRANSICIÓN ---
+                # Confirma la palabra más repetida en la ventana de votación reciente.
                 word_counts = collections.Counter(predictions_buffer)
                 most_common_word, count = word_counts.most_common(1)[0]
 
@@ -90,26 +90,26 @@ def real_time_translation(threshold=0.75):
                 else:
                     stable_word = "nada"
 
-                # State machine that appends confirmed words to the sentence.
+                # Máquina de estados que agrega las palabras confirmadas a la oración.
                 if stable_word != "nada":
-                    rest_counter = 0 # Reset the rest-state counter.
+                    rest_counter = 0 # Reinicia el contador del estado de reposo.
 
-                    # Only append a new word once to avoid repeated output such as 'hola hola hola'.
+                    # Agrega una palabra nueva solo una vez para evitar salidas repetidas como 'hola hola hola'.
                     if stable_word != last_emitted_word:
                         sentence.append(stable_word)
                         last_emitted_word = stable_word
 
-                        # Keep the sentence capped so the overlay remains readable.
+                        # Mantén la oración limitada para que la superposición siga siendo legible.
                         if len(sentence) > 5:
                             sentence = sentence[-5:]
 
                 else:
-                    # Sustained rest lets the user repeat the last emitted word later.
+                    # Un reposo sostenido permite que el usuario repita más tarde la última palabra emitida.
                     rest_counter += 1
-                    if rest_counter > 15: # Roughly half a second of true pause.
+                    if rest_counter > 15: # Aproximadamente medio segundo de pausa real.
                         last_emitted_word = "nada"
 
-            # --- GRAPHICAL INTERFACE ---
+            # --- INTERFAZ GRÁFICA ---
             cv2.rectangle(image, (0, 0), (640, 40), (245, 117, 16), -1)
             cv2.putText(image, ' '.join(sentence).upper(), (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)

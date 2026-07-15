@@ -1,7 +1,7 @@
-"""Shared constants and MediaPipe helpers for the word/phrase research pipeline.
+"""Constantes compartidas y ayudantes de MediaPipe para el pipeline de investigación de palabras/frases.
 
-Keep label order and feature extraction aligned with the trained word model.
-Spanish label strings are model outputs and should not be renamed casually.
+Mantenga el orden de las etiquetas y la extracción de características alineados con el modelo de palabras entrenado.
+Las cadenas de etiquetas en español son salidas del modelo y no deben renombrarse a la ligera.
 """
 
 import os
@@ -10,19 +10,19 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
-# Sequence and feature contract used by the trained word/phrase LSTM.
+# Contrato de secuencia y de características usado por la LSTM de palabras/frases entrenada.
 MAX_FRAMES = 60
 
-# Current models use a compact 306-value vector:
+# Los modelos actuales usan un vector compacto de 306 valores:
 # 33 pose landmarks x 4 + 16 selected face landmarks x 3 + 21 left-hand x 3 + 21 right-hand x 3.
 SELECTED_FACE_INDICES = [
-    61, 291, 0, 17, 13, 14,      # Lips and mouth corners
-    33, 133, 362, 263,           # Eye corners
-    70, 63, 105, 336, 296, 334   # Eyebrows
+    61, 291, 0, 17, 13, 14,      # Labios y comisuras de la boca
+    33, 133, 362, 263,           # Comisuras de los ojos
+    70, 63, 105, 336, 296, 334   # Cejas
 ]
 LENGTH_KEYPOINTS = 306
 
-# Workspace paths. These are folder-relative so scripts can be run from this research directory.
+# Rutas del espacio de trabajo. Son relativas a la carpeta para que los scripts puedan ejecutarse desde este directorio de investigación.
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(ROOT_PATH, "keypoint_datasets")
 MODEL_FOLDER_PATH = os.path.join(ROOT_PATH, "models")
@@ -30,7 +30,7 @@ METRICS_FOLDER = os.path.join(ROOT_PATH, "metrics")
 MODEL_PATH = os.path.join(MODEL_FOLDER_PATH, "modelo_señas_lstm.keras")
 VIDEOS_FOLDER = os.path.join(ROOT_PATH, "videos")
 
-# Stable model labels. These Spanish/LESSA labels are part of the trained artifact contract.
+# Etiquetas estables del modelo. Estas etiquetas en español/LESSA son parte del contrato del artefacto entrenado.
 WORDS = [
     "hola", "buenos_dias", "gracias", "mucho gusto", "mi_nombre_es", "cuidate",
     "nada", "buenas tardes", "buenas noches", "como estas", "cual es tu nombre",
@@ -40,11 +40,11 @@ WORDS = [
 
 
 def mediapipe_detection(image, model):
-    """Run one OpenCV frame through a MediaPipe model and return BGR output plus landmarks.
+    """Procesa un fotograma de OpenCV a través de un modelo de MediaPipe y devuelve la salida BGR más los landmarks.
 
-    OpenCV reads BGR frames, while MediaPipe expects RGB input. The writeable flag is
-    turned off during processing because MediaPipe can skip an internal copy when the
-    frame is read-only."""
+    OpenCV lee fotogramas en BGR, mientras que MediaPipe espera entrada en RGB. La bandera writeable se
+    desactiva durante el procesamiento porque MediaPipe puede omitir una copia interna cuando el
+    fotograma es de solo lectura."""
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image.flags.writeable = False
     results = model.process(image)
@@ -54,7 +54,7 @@ def mediapipe_detection(image, model):
 
 
 def extract_keypoints(results):
-    """Extract the 306-value nose-anchored feature vector used by word models."""
+    """Extrae el vector de características de 306 valores anclado en la nariz que usan los modelos de palabras."""
     if results.pose_landmarks:
         anchor_x = results.pose_landmarks.landmark[0].x
         anchor_y = results.pose_landmarks.landmark[0].y
@@ -92,6 +92,6 @@ def extract_keypoints(results):
 
 
 def create_folder_if_not_exists(path):
-    """Create a workspace folder when a script is about to write generated research output."""
+    """Crea una carpeta del espacio de trabajo cuando un script está por escribir salidas de investigación generadas."""
     if not os.path.exists(path):
         os.makedirs(path)

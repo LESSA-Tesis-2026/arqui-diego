@@ -1,1 +1,1 @@
-"""Research and prototype scripts for the LESSA thesis project."""
+"""Scripts de investigación y prototipos para el proyecto de tesis de LESSA."""

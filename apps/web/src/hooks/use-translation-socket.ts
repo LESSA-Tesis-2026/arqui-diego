@@ -131,8 +131,8 @@ export function useTranslationSocket({
 
       const emitted = message.emitted_token ?? message.emitted_word;
       if (emitted) {
-        // Audio is intentionally tied to stable backend emissions only; speaking raw
-        // frame-level predictions would repeat unstable guesses and confuse users.
+        // El audio se vincula intencionalmente solo a emisiones estables del backend; reproducir
+        // predicciones crudas a nivel de fotograma repetiría conjeturas inestables y confundiría a los usuarios.
         if (voiceEnabled && speechSupported) {
           const spoken = message.prediction_type === "letter" ? emitted : formatLabel(emitted);
           speak(spoken);

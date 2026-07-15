@@ -1,18 +1,18 @@
-# LESSA Alphabet Research Pipeline
+# Pipeline de investigación del alfabeto de LESSA
 
-`research/alphabet` contains the static-letter workflow for collecting images, extracting MediaPipe keypoints, training the alphabet classifier, and smoke-testing it with an OpenCV demo. This pipeline is separate from the dynamic word/phrase model.
+`research/alphabet` contiene el flujo de trabajo de letras estáticas para recolectar imágenes, extraer keypoints de MediaPipe, entrenar el clasificador del alfabeto y hacerle una prueba rápida (smoke-test) con un demo de OpenCV. Este pipeline es independiente del modelo dinámico de palabras/frases.
 
-## Label contract
+## Contrato de etiquetas
 
-The alphabet classes are defined in `alphabet_config.py`:
+Las clases del alfabeto se definen en `alphabet_config.py`:
 
 ```python
 ALPHABET = list("ABCDEFGHIKLMNOPQRSTUVWXY")
 ```
 
-`J` and `Z` are intentionally absent because they usually require motion, while this classifier uses one static frame at a time.
+`J` y `Z` están ausentes intencionalmente porque normalmente requieren movimiento, mientras que este clasificador usa un fotograma estático a la vez.
 
-## File map
+## Mapa de archivos
 
 ```text
 research/alphabet/
@@ -26,7 +26,7 @@ research/alphabet/
 └── Makefile                         # Common setup and run commands
 ```
 
-Generated folders are local outputs:
+Las carpetas generadas son salidas locales:
 
 ```text
 raw_images/         # Raw captured images, grouped by letter
@@ -35,7 +35,7 @@ trained_model/      # Trained model and generated metrics
 .venv/              # uv-managed Python environment
 ```
 
-## End-to-end workflow
+## Flujo de trabajo de extremo a extremo
 
 ```mermaid
 flowchart LR
@@ -47,9 +47,9 @@ flowchart LR
     F --> G["run_alphabet_realtime_demo.py"]
 ```
 
-## Feature contract
+## Contrato de características
 
-Each image/frame is converted into a `306` value vector:
+Cada imagen/fotograma se convierte en un vector de `306` valores:
 
 ```text
 pose:          33 landmarks x 4 values = 132
@@ -58,11 +58,11 @@ left hand:     21 landmarks x 3 values = 63
 right hand:    21 landmarks x 3 values = 63
 ```
 
-Coordinates are normalized relative to the nose landmark. This keeps the classifier less dependent on the signer's position in the camera frame.
+Las coordenadas se normalizan con respecto al punto de referencia (landmark) de la nariz. Esto hace que el clasificador dependa menos de la posición del señante dentro del fotograma de la cámara.
 
-## Setup
+## Configuración
 
-Use Python `3.11` through `uv`. MediaPipe classic `mp.solutions` is expected by these scripts and works with the pinned dependency set.
+Use Python `3.11` a través de `uv`. Estos scripts esperan el MediaPipe clásico `mp.solutions`, que funciona con el conjunto de dependencias fijado.
 
 ```bash
 cd research/alphabet
@@ -70,9 +70,9 @@ make setup
 make check
 ```
 
-`make setup` runs `uv sync --python 3.11`. `make check` verifies Python, OpenCV, MediaPipe, and TensorFlow imports.
+`make setup` ejecuta `uv sync --python 3.11`. `make check` verifica las importaciones de Python, OpenCV, MediaPipe y TensorFlow.
 
-## Recommended execution order
+## Orden de ejecución recomendado
 
 ```bash
 cd research/alphabet
@@ -82,7 +82,7 @@ make train
 make translate
 ```
 
-Equivalent direct commands:
+Comandos directos equivalentes:
 
 ```bash
 uv run python collect_alphabet_images.py
@@ -91,23 +91,23 @@ uv run python train_alphabet_model.py
 uv run python run_alphabet_realtime_demo.py
 ```
 
-### 1. Capture images
+### 1. Capturar imágenes
 
-`collect_alphabet_images.py` captures the missing amount for each letter up to `TARGET_IMAGES`.
+`collect_alphabet_images.py` captura la cantidad faltante para cada letra hasta `TARGET_IMAGES`.
 
-Controls:
+Controles:
 
-- Press `r` to start auto-capture for the current letter.
-- Press `space` to pause/resume while repositioning.
-- Press `q` to quit.
+- Presione `r` para iniciar la autocaptura de la letra actual.
+- Presione `space` para pausar/reanudar mientras se reposiciona.
+- Presione `q` para salir.
 
-### 2. Extract keypoints
+### 2. Extraer keypoints
 
-`extract_alphabet_keypoints.py` reads `raw_images/<letter>/*.jpg`, discards frames without hand landmarks, and writes one H5 file per letter under `keypoint_datasets/`.
+`extract_alphabet_keypoints.py` lee `raw_images/<letter>/*.jpg`, descarta los fotogramas sin landmarks de mano y escribe un archivo H5 por letra en `keypoint_datasets/`.
 
-### 3. Train
+### 3. Entrenar
 
-`train_alphabet_model.py` trains a static dense classifier and writes:
+`train_alphabet_model.py` entrena un clasificador denso estático y escribe:
 
 ```text
 trained_model/modelo_letras.h5
@@ -116,23 +116,23 @@ trained_model/metrics/confusion_matrix.png
 trained_model/metrics/classification_report.txt
 ```
 
-### 4. Smoke-test prediction
+### 4. Prueba rápida de predicción
 
-`run_alphabet_realtime_demo.py` loads `trained_model/modelo_letras.h5`, predicts letters from webcam frames, and stabilizes the display with a short voting buffer.
+`run_alphabet_realtime_demo.py` carga `trained_model/modelo_letras.h5`, predice letras a partir de fotogramas de la webcam y estabiliza la visualización con un búfer de votación corto.
 
-## Runtime handoff
+## Entrega a ejecución
 
-After validating the classifier, copy the model artifact to the repository-root runtime folder:
+Después de validar el clasificador, copie el artefacto de modelo a la carpeta de ejecución en la raíz del repositorio:
 
 ```text
 models/modelo_letras.h5
 ```
 
-The FastAPI backend reports Alphabet mode unavailable until that artifact exists and loads successfully.
+El backend de FastAPI reporta el modo Alfabeto como no disponible hasta que ese artefacto exista y se cargue correctamente.
 
-## Practical capture notes
+## Notas prácticas de captura
 
-- Use consistent lighting and keep the hand fully visible.
-- Pause between letters to reposition the hand before continuing capture.
-- Capture more than a smoke-test amount before relying on a model for a demo.
-- Keep validation and test images untouched; only the training split should be augmented in future experiments.
+- Use una iluminación consistente y mantenga la mano completamente visible.
+- Haga pausas entre letras para reposicionar la mano antes de continuar la captura.
+- Capture más que una cantidad de prueba rápida antes de depender de un modelo para una demo.
+- Mantenga sin modificar las imágenes de validación y de prueba; solo el conjunto de entrenamiento debe aumentarse en experimentos futuros.

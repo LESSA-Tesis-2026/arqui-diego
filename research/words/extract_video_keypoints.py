@@ -1,7 +1,7 @@
-"""Convert raw word/phrase videos into MediaPipe keypoint H5 datasets.
+"""Convierte videos de palabras/frases sin procesar en datasets H5 de keypoints de MediaPipe.
 
-The extractor reuses `word_config.extract_keypoints` so the research dataset
-matches the same nose-relative feature contract expected by training and runtime.
+El extractor reutiliza `word_config.extract_keypoints` para que el dataset de investigación
+coincida con el mismo contrato de características relativo a la nariz que esperan el entrenamiento y la ejecución.
 """
 
 import cv2
@@ -13,15 +13,15 @@ from word_config import *
 
 
 def extract_video_keypoints():
-    """Batch-convert raw word/phrase videos into per-label H5 keypoint sequences.
+    """Convierte por lotes videos de palabras/frases sin procesar en secuencias de keypoints H5 por etiqueta.
 
-    Existing dataset keys are skipped, which allows the extractor to be run multiple
-    times after interrupted capture sessions without duplicating samples."""
-    # Ensure the output folder exists before writing H5 datasets.
+    Las claves de dataset existentes se omiten, lo que permite ejecutar el extractor varias
+    veces tras sesiones de captura interrumpidas sin duplicar muestras."""
+    # Asegura que la carpeta de salida exista antes de escribir los datasets H5.
     create_folder_if_not_exists(DATA_PATH)
     mp_holistic = mp.solutions.holistic
 
-    # Start MediaPipe once and reuse it across all videos for faster batch processing.
+    # Inicia MediaPipe una sola vez y reutilízalo en todos los videos para un procesamiento por lotes más rápido.
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
 
         for word in WORDS:
@@ -38,15 +38,15 @@ def extract_video_keypoints():
 
             print(f"\n--- EXTRACTING VIDEO LANDMARKS: {word.upper()} ---")
 
-            # Open the H5 file in append mode so processing can resume without overwriting existing samples.
+            # Abre el archivo H5 en modo de anexado (append) para que el procesamiento pueda reanudarse sin sobrescribir las muestras existentes.
             with h5py.File(h5_file_path, 'a') as hf:
                 existing_datasets = list(hf.keys())
 
                 for video_file in video_files:
-                    # Convert 'sample_0.avi' into the dataset key 'sample_0'.
+                    # Convierte 'sample_0.avi' en la clave de dataset 'sample_0'.
                     dataset_name = os.path.splitext(video_file)[0]
 
-                    # Skip videos that have already been converted into H5 datasets.
+                    # Omite los videos que ya se convirtieron en datasets H5.
                     if dataset_name in existing_datasets:
                         continue
 
@@ -57,18 +57,18 @@ def extract_video_keypoints():
                     while True:
                         ret, frame = cap.read()
                         if not ret:
-                            break # End of video.
+                            break # Fin del video.
 
-                        # Run the raw frame through MediaPipe.
+                        # Procesa el fotograma sin procesar a través de MediaPipe.
                         image, results = mediapipe_detection(frame, holistic)
 
-                        # Use the shared config helper, which normalizes coordinates relative to the nose.
+                        # Usa el ayudante de configuración compartido, que normaliza las coordenadas con respecto a la nariz.
                         keypoints = extract_keypoints(results)
                         sequence_data.append(keypoints)
 
                     cap.release()
 
-                    # Persist the extracted keypoint sequence in the H5 file.
+                    # Persiste la secuencia de keypoints extraída en el archivo H5.
                     if sequence_data:
                         hf.create_dataset(dataset_name, data=np.array(sequence_data))
                         print(f"Processed: {dataset_name} | Length: {len(sequence_data)} frames")

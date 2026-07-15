@@ -1,7 +1,7 @@
-"""Merge two H5 capture sessions for the same word/phrase label.
+"""Fusiona dos sesiones de captura H5 de la misma etiqueta de palabra/frase.
 
-This script is intentionally manual: edit the input filenames in the main block
-before running it so accidental cross-label merges are avoided.
+Este script es intencionalmente manual: edite los nombres de los archivos de entrada en el bloque principal
+antes de ejecutarlo para evitar fusiones accidentales entre etiquetas distintas.
 """
 
 import os
@@ -13,7 +13,7 @@ DATASET_MERGE_FOLDER = "data_to_merge"
 
 
 def merge_h5_files(target_file_name, donor_file_name):
-    """Append donor H5 sample datasets into a target H5 file without overwriting sample keys."""
+    """Agrega los datasets de muestra del H5 donante a un archivo H5 objetivo sin sobrescribir las claves de muestra."""
     target_path = os.path.join(DATASET_MERGE_FOLDER, target_file_name)
     donor_path = os.path.join(DATASET_MERGE_FOLDER, donor_file_name)
 
@@ -48,7 +48,7 @@ def merge_h5_files(target_file_name, donor_file_name):
 
 
 if __name__ == "__main__":
-    # Change these file names when manually merging two H5 captures for the same label.
+    # Cambie estos nombres de archivo al fusionar manualmente dos capturas H5 de la misma etiqueta.
     target_file = "hola.h5"
     donor_file = "hola2.h5"
 

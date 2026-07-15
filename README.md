@@ -1,67 +1,68 @@
 # LESSA Translation
 
-Thesis prototype for live LESSA-to-Spanish translation. The project combines a FastAPI model-serving backend, a Next.js browser translation experience, active model-development workspaces, shared documentation, and Docker orchestration for local runtime. The prototype supports hybrid word/phrase and alphabet inference.
+Prototipo de tesis para la traducción en vivo de LESSA a español. El proyecto combina un backend de servido de modelos con FastAPI, una experiencia de traducción en navegador con Next.js, espacios de trabajo activos de desarrollo de modelos, documentación compartida y orquestación con Docker para el runtime local. El prototipo admite inferencia híbrida de palabra/frase y alfabeto.
 
-## Repository Map
+## Mapa del Repositorio
 
-- `apps/api`: FastAPI backend. It owns frame preprocessing, model loading, hybrid inference, stabilization, and the public REST/WebSocket contract.
-- `apps/web`: Next.js frontend. It owns camera access, Auto/Words/Alphabet controls, live status, Spanish translation output, and optional browser speech feedback.
-- `research/words`: active research/model-development workspace for the word/phrase LSTM. The production apps consume the trained `.keras` artifact from this workflow instead of importing these scripts directly.
-- `research/alphabet`: active research/model-development workspace for the static alphabet classifier. The app can load its trained `.h5` artifact when available.
-- `research/prototypes`: OpenCV hybrid-translation prototypes for research checks.
-- `models`: local runtime artifact folder. It is ignored by Git and should contain model files for local/Docker execution.
-- `docs`: project-level architecture, delivery, and development documentation.
-- `docker-compose.yml`: local full-stack runtime for the web app and API.
+- `apps/api`: backend de FastAPI. Es responsable del preprocesamiento de fotogramas, la carga de modelos, la inferencia híbrida, la estabilización y el contrato público REST/WebSocket.
+- `apps/web`: frontend de Next.js. Es responsable del acceso a la cámara, los controles Auto/Words/Alphabet, el estado en vivo, la salida de traducción al español y la retroalimentación de voz opcional del navegador.
+- `research/words`: espacio de trabajo activo de investigación/desarrollo de modelos para el LSTM de palabra/frase. Las aplicaciones de producción consumen el artefacto `.keras` entrenado de este flujo de trabajo en lugar de importar estos scripts directamente.
+- `research/alphabet`: espacio de trabajo activo de investigación/desarrollo de modelos para el clasificador estático del alfabeto. La aplicación puede cargar su artefacto `.h5` entrenado cuando esté disponible.
+- `research/prototypes`: prototipos de traducción híbrida con OpenCV para verificaciones de investigación.
+- `models`: carpeta local de artefactos de runtime. Es ignorada por Git y debe contener los archivos de modelo para la ejecución local/Docker.
+- `docs`: documentación de arquitectura, entrega y desarrollo a nivel de proyecto.
+- `docker-compose.yml`: runtime local de pila completa para la aplicación web y la API.
 
 
-## Language and Model Labels
+## Idioma y Etiquetas de Modelo
 
-The prototype is for LESSA and Spanish speakers:
+El prototipo es para hablantes de LESSA y español:
 
-- User-facing copy stays Spanish.
-- LESSA classes and trained model labels stay stable, e.g. `hola`, `buenos_dias`, `mi_nombre_es`, and `nada`.
-- Code identifiers, module names, API fields, and developer-facing documentation use English unless they represent user-facing Spanish or model labels.
+- El texto orientado al usuario permanece en español.
+- Las clases de LESSA y las etiquetas de modelo entrenadas permanecen estables, por ejemplo `hola`, `buenos_dias`, `mi_nombre_es` y `nada`.
+- La documentación y los comentarios de código están en español.
+- Los identificadores de código, nombres de módulos y campos de API se mantienen en inglés, a menos que representen texto en español orientado al usuario o etiquetas de modelo.
 
-## How It Connects
+## Cómo se Conecta
 
-The browser captures camera frames in `apps/web` and streams them to the API over a WebSocket:
+El navegador captura fotogramas de la cámara en `apps/web` y los transmite (stream) a la API a través de un WebSocket:
 
 ```text
 apps/web -> WS /api/v1/translate/stream -> apps/api
 ```
 
-The API decodes each frame, extracts hand/body landmarks once, builds the word and alphabet feature vectors, and chooses the active recognizer. Auto mode routes moving signs to the word LSTM and static signs to the alphabet classifier; the UI can also force Words or Alphabet mode. The API waits for a short settling window before inference and throttles predictions to avoid flicker. The frontend renders recognition status, confidence, recent predictions, and progressive Spanish text. When browser speech synthesis is available, the frontend can speak accepted emissions: full words/phrases in Words mode and individual letters in Alphabet mode.
+La API decodifica cada fotograma, extrae los puntos de referencia (landmarks) de mano/cuerpo una sola vez, construye los vectores de características de palabra y alfabeto, y elige el reconocedor activo. El modo Auto enruta las señas en movimiento al LSTM de palabra y las señas estáticas al clasificador del alfabeto; la interfaz de usuario también puede forzar el modo Words o Alphabet. La API espera una breve ventana de asentamiento antes de la inferencia y limita las predicciones para evitar parpadeo. El frontend renderiza el estado de reconocimiento, la confianza, las predicciones recientes y el texto progresivo en español. Cuando la síntesis de voz del navegador está disponible, el frontend puede pronunciar las emisiones aceptadas: palabras/frases completas en modo Words y letras individuales en modo Alphabet.
 
-The trained models are runtime artifacts. They are not built by the web or API applications. The word model remains required for word recognition; the alphabet model is optional and its mode is marked unavailable until the `.h5` artifact exists.
+Los modelos entrenados son artefactos de runtime. No son construidos (build) por las aplicaciones web o API. El modelo de palabra sigue siendo requerido para el reconocimiento de palabras; el modelo de alfabeto es opcional y su modo se marca como no disponible hasta que exista el artefacto `.h5`.
 
-## Runtime Flow
+## Flujo de Runtime
 
-1. User opens the web app at `http://localhost:3000`.
-2. Browser requests camera permission.
-3. Frontend connects to the API WebSocket at `http://localhost:8000/api/v1/translate/stream`.
-4. Frontend sends encoded frames while translation is active.
-5. API preprocesses frames and runs word or alphabet inference based on the selected mode and motion score.
-6. API sends hybrid translation events back to the browser.
-7. Frontend displays the current translation and session history.
-8. If voice feedback is enabled and supported by the browser, accepted emitted tokens are spoken with the browser SpeechSynthesis API.
+1. El usuario abre la aplicación web en `http://localhost:3000`.
+2. El navegador solicita permiso de cámara.
+3. El frontend se conecta al WebSocket de la API en `http://localhost:8000/api/v1/translate/stream`.
+4. El frontend envía fotogramas codificados mientras la traducción está activa.
+5. La API preprocesa los fotogramas y ejecuta la inferencia de palabra o alfabeto según el modo seleccionado y la puntuación de movimiento.
+6. La API envía eventos de traducción híbrida de vuelta al navegador.
+7. El frontend muestra la traducción actual y el historial de la sesión.
+8. Si la retroalimentación de voz está habilitada y es compatible con el navegador, los tokens emitidos aceptados se pronuncian con la API SpeechSynthesis del navegador.
 
-## Documentation
+## Documentación
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): repository boundaries, runtime flow, backend/frontend structure, model contracts.
-- [`docs/DELIVERY.md`](docs/DELIVERY.md): thesis-demo setup, verification checklist, generated-file policy, future-work notes.
-- [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md): local development and Docker commands.
-- [`research/README.md`](research/README.md): research workspace boundaries and generated-artifact policy.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): límites del repositorio, flujo de runtime, estructura de backend/frontend, contratos de modelo.
+- [`docs/DELIVERY.md`](docs/DELIVERY.md): configuración de la demo de tesis, lista de verificación, política de archivos generados, notas de trabajo futuro.
+- [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md): comandos de desarrollo local y Docker.
+- [`research/README.md`](research/README.md): límites del espacio de trabajo de investigación y política de artefactos generados.
 
-## Local Development
+## Desarrollo Local
 
-Backend checks:
+Verificaciones del backend:
 
 ```bash
 cd apps/api
 uv run pytest
 ```
 
-Frontend checks:
+Verificaciones del frontend:
 
 ```bash
 cd apps/web
@@ -69,33 +70,33 @@ pnpm lint
 pnpm build
 ```
 
-See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for full setup.
+Consulte [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) para la configuración completa.
 
 ## Docker
 
-Run the full stack from the repository root:
+Ejecute la pila completa desde la raíz del repositorio:
 
 ```bash
 docker compose up --build
 ```
 
-Then open:
+Luego abra:
 
 ```text
 http://localhost:3000
 ```
 
-The API health endpoint is available at:
+El endpoint de salud de la API está disponible en:
 
 ```text
 http://localhost:8000/api/v1/health
 ```
 
-## Environment
+## Entorno
 
-Each app has one tracked environment template:
+Cada aplicación tiene una plantilla de entorno versionada:
 
 - `apps/api/.env.example`
 - `apps/web/.env.example`
 
-Local `.env` files are intentionally untracked. The API uses `LESSA_WORD_MODEL_PATH` and `LESSA_ALPHABET_MODEL_PATH` for the two runtime artifacts. Docker-specific values live in `docker-compose.yml` because they are tied to published ports and volume mounts.
+Los archivos `.env` locales intencionalmente no se versionan. La API usa `LESSA_WORD_MODEL_PATH` y `LESSA_ALPHABET_MODEL_PATH` para los dos artefactos de runtime. Los valores específicos de Docker viven en `docker-compose.yml` porque están vinculados a los puertos publicados y los montajes de volúmenes.

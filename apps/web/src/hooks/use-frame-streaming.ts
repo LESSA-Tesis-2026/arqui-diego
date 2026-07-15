@@ -40,8 +40,8 @@ export function useFrameStreaming({ canvasRef, selectedModeRef, socketRef, video
 
     if (!video || !canvas || socket?.readyState !== WebSocket.OPEN) return;
     if (!video.videoWidth || !video.videoHeight) return;
-    // Dropping frames while the socket has pending bytes keeps the UI responsive
-    // and prevents queued stale frames from producing delayed predictions.
+    // Descartar fotogramas mientras el socket tiene bytes pendientes mantiene la UI receptiva
+    // y evita que los fotogramas obsoletos en cola produzcan predicciones retrasadas.
     if (socket.bufferedAmount > 0) return;
 
     const width = frameWidth;

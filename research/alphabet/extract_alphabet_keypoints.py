@@ -1,4 +1,4 @@
-"""Convert raw alphabet images into 306-value MediaPipe keypoint H5 datasets."""
+"""Convierte imágenes del alfabeto sin procesar en datasets H5 de keypoints de MediaPipe de 306 valores."""
 
 import cv2
 import numpy as np
@@ -8,10 +8,10 @@ import os
 from alphabet_config import *
 
 def extract_alphabet_keypoints():
-    """Convert alphabet images into one 306-value H5 dataset per letter.
+    """Convierte imágenes del alfabeto en un dataset H5 de 306 valores por letra.
 
-    Frames without detected hands are skipped because they would teach the classifier
-    that missing hands are valid examples of a letter."""
+    Los fotogramas sin manos detectadas se omiten porque le enseñarían al clasificador
+    que la ausencia de manos es un ejemplo válido de una letra."""
     create_folder_if_not_exists(DATA_H5_FOLDER)
     mp_holistic = mp.solutions.holistic
 
@@ -40,12 +40,12 @@ def extract_alphabet_keypoints():
                     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     results = holistic.process(image_rgb)
 
-                    # Discard images where no hand landmarks were detected.
+                    # Descartar imágenes donde no se detectaron landmarks de mano.
                     if not results.left_hand_landmarks and not results.right_hand_landmarks:
                         continue
 
                     keypoints = extract_keypoints(results)
-                    # Store one static 306-value landmark vector per image.
+                    # Almacenar un vector de landmarks estático de 306 valores por imagen.
                     hf.create_dataset(dataset_name, data=keypoints)
 
             print(f"[OK] Letter {letter} saved to .h5")

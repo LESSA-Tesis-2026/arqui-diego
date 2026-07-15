@@ -49,7 +49,7 @@ export function useSpeechSynthesis() {
         setVoice(pickSpanishVoice(synthesis.getVoices()));
       };
 
-      // Browser voices often arrive asynchronously after hydration, especially in Chromium.
+      // Las voces del navegador suelen llegar de forma asíncrona después de la hydration, especialmente en Chromium.
       voiceSyncTimeout = window.setTimeout(syncVoices, 0);
       synthesis.addEventListener("voiceschanged", syncVoices);
     }, 0);

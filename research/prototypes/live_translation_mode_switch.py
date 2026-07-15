@@ -1,15 +1,15 @@
-"""OpenCV prototype with manual switching between word and alphabet modes.
+"""Prototipo de OpenCV con cambio manual entre los modos de palabras y de alfabeto.
 
-Useful for checking mode-transition behavior before changes are ported to the
-FastAPI/WebSocket runtime.
+Útil para verificar el comportamiento de transición entre modos antes de portar los cambios al
+entorno de ejecución de FastAPI/WebSocket.
 """
 
 import cv2
 from pathlib import Path
 import sys
 
-# Allow these standalone prototype scripts to be run from the repository root
-# without installing the research package as a Python distribution.
+# Permite que estos scripts de prototipo independientes se ejecuten desde la raíz del repositorio
+# sin instalar el paquete de research como una distribución de Python.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -21,12 +21,12 @@ import textwrap
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-# Import both research configuration modules with aliases to avoid name collisions.
+# Importa ambos módulos de configuración de research con alias para evitar colisiones de nombres.
 import research.words.word_config as cfg_words
 import research.alphabet.alphabet_config as cfg_alphabet
 
 def draw_keypoints(image, results):
-    """Draw pose and hand landmarks when debugging the manual hybrid prototype preview."""
+    """Dibuja los landmarks de pose y manos al depurar la vista previa del prototipo híbrido manual."""
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
     if results.pose_landmarks:
@@ -37,10 +37,10 @@ def draw_keypoints(image, results):
         mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
 def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
-    """Run the manual hybrid prototype with keyboard switching between words and alphabet.
+    """Ejecuta el prototipo híbrido manual con cambio por teclado entre palabras y alfabeto.
 
-    Use this when isolating word or alphabet behavior without the automatic motion
-    router influencing predictions."""
+    Úsalo cuando aísles el comportamiento de palabras o de alfabeto sin que el enrutador
+    automático de movimiento influya en las predicciones."""
     print("Loading word model...")
     model_words = load_model(cfg_words.MODEL_PATH)
     print("Loading alphabet model...")
@@ -48,13 +48,13 @@ def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
 
     mp_holistic = mp.solutions.holistic
 
-    # --- Hyperparameters and state ---
+    # --- Hiperparámetros y estado ---
     current_mode = "words"
 
-    # Accumulated translated text.
+    # Texto traducido acumulado.
     accumulated_text = ""
 
-    # Word-recognition state.
+    # Estado del reconocimiento de palabras.
     WINDOW_SIZE = 25
     VOTING_BUFFER_SIZE_WORDS = 10
     MIN_VOTES_WORDS = 7
@@ -64,10 +64,10 @@ def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
     rest_counter = 0
     current_probs = np.zeros(len(cfg_words.WORDS))
 
-    # Alphabet-recognition state.
+    # Estado del reconocimiento del alfabeto.
     ALPHABET_BUFFER_SIZE = 5
     alphabet_predictions_buffer = collections.deque(maxlen=ALPHABET_BUFFER_SIZE)
-    last_emitted_letter = "-"  # Avoid infinitely repeating the same accepted letter.
+    last_emitted_letter = "-"  # Evita repetir infinitamente la misma letra aceptada.
 
     cap = cv2.VideoCapture(0)
 
@@ -80,7 +80,7 @@ def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
             draw_keypoints(image, results)
 
             # ==========================================
-            # MODE: word/phrase translation (CSLR).
+            # MODO: traducción de palabras/frases (CSLR).
             # ==========================================
             if current_mode == "words":
                 if results.left_hand_landmarks or results.right_hand_landmarks:
@@ -116,7 +116,7 @@ def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
                     if stable_word != "nada":
                         rest_counter = 0
                         if stable_word != last_emitted_word:
-                            # Insert a space when appending a word after existing text.
+                            # Inserta un espacio al agregar una palabra después del texto existente.
                             if len(accumulated_text) > 0 and not accumulated_text.endswith(" "):
                                 accumulated_text += " "
                             accumulated_text += stable_word + " "
@@ -126,7 +126,7 @@ def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
                         if rest_counter > 15:
                             last_emitted_word = "nada"
 
-                # Word probability panel; placed below the persistent text area.
+                # Panel de probabilidades de palabra; ubicado debajo del área de texto persistente.
                 panel_height = 110 + (len(cfg_words.WORDS) * 30)
                 cv2.rectangle(image, (0, 110), (250, panel_height), (40, 40, 40), -1)
 
@@ -139,7 +139,7 @@ def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
                     y_offset += 30
 
             # ==========================================
-            # MODE: alphabet translation.
+            # MODO: traducción del alfabeto.
             # ==========================================
             elif current_mode == "alphabet":
                 if results.left_hand_landmarks or results.right_hand_landmarks:
@@ -164,13 +164,13 @@ def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
                     else:
                         current_letter = "-"
 
-                    # Logic for joining consecutive letters (H + O + L + A).
+                    # Lógica para unir letras consecutivas (H + O + L + A).
                     if current_letter != "-" and current_letter != last_emitted_letter:
                         accumulated_text += current_letter
                         last_emitted_letter = current_letter
                     elif current_letter == "-":
-                        # Reset duplicate-letter guard when the sign is no longer stable.
-                        # This allows repeated letters, e.g. 'L', release, then 'L' again for 'LL'.
+                        # Reinicia la protección contra letras duplicadas cuando la seña deja de ser estable.
+                        # Esto permite letras repetidas, p. ej. 'L', soltar y luego 'L' de nuevo para 'LL'.
                         last_emitted_letter = "-"
 
                 else:
@@ -178,39 +178,39 @@ def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
                     alphabet_predictions_buffer.clear()
 
             # ==========================================
-            # Shared OpenCV interface with persistent accumulated text.
+            # Interfaz compartida de OpenCV con texto acumulado persistente.
             # ==========================================
 
-            # Text background, sized for multiple lines.
+            # Fondo del texto, dimensionado para múltiples líneas.
             cv2.rectangle(image, (0, 0), (640, 110), (245, 117, 16), -1)
 
-            # Wrap text so it does not leave the frame, roughly 35 characters per line.
+            # Ajusta el texto para que no salga del fotograma, aproximadamente 35 caracteres por línea.
             wrapped_lines = textwrap.wrap(accumulated_text, width=35)
 
-            # Render only the last three lines to avoid overflowing the overlay box.
+            # Renderiza solo las últimas tres líneas para evitar desbordar la caja de superposición.
             y_text = 35
             for line in wrapped_lines[-3:]:
                 cv2.putText(image, line.upper(), (10, y_text), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
                 y_text += 35
 
-            # --- General mode indicator ---
+            # --- Indicador general de modo ---
             mode_text = "MODE: WORDS" if current_mode == "words" else "MODE: ALPHABET"
             cv2.putText(image, f"{mode_text} ('s' = switch | 'b' = clear)", (10, image.shape[0] - 20),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2, cv2.LINE_AA)
 
             cv2.imshow('LESSA Hybrid Translator', image)
 
-            # --- Keyboard controls ---
+            # --- Controles de teclado ---
             key = cv2.waitKey(10) & 0xFF
             if key == ord('q'):
                 break
             elif key == ord('s'):
-                # Switch mode.
+                # Cambia de modo.
                 if current_mode == "words":
                     current_mode = "alphabet"
                     alphabet_predictions_buffer.clear()
                     last_emitted_letter = "-"
-                    # Optionally add a space when switching into letter mode if one is missing.
+                    # Opcionalmente agrega un espacio al cambiar al modo de letras si falta uno.
                     if len(accumulated_text) > 0 and not accumulated_text.endswith(" "):
                         accumulated_text += " "
                 else:
@@ -219,7 +219,7 @@ def real_time_combined(threshold_words=0.65, threshold_alphabet=0.80):
                     predictions_buffer_words.clear()
                     last_emitted_word = "nada"
             elif key == ord('b'):
-                # Clear all emitted text.
+                # Limpia todo el texto emitido.
                 accumulated_text = ""
                 last_emitted_word = "nada"
                 last_emitted_letter = "-"

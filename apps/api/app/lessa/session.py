@@ -11,10 +11,11 @@ from app.lessa.schemas import PredictionType, ResolvedMode
 
 @dataclass
 class HybridTranslationSession:
-    """Per-WebSocket translation state.
+    """Estado de traducción por cada WebSocket.
 
-    Each browser connection owns its own buffers so voting, generated text, and
-    hold-last-reading behavior never leak between users or tabs.
+    Cada conexión de navegador es dueña de sus propios buffers para que la votación, el texto
+    generado y el comportamiento de mantener la última lectura nunca se filtren entre usuarios
+    o pestañas.
     """
 
     settings: Settings
@@ -62,13 +63,16 @@ class HybridTranslationSession:
 
     @property
     def sentence(self) -> list[str]:
+        """Últimos `max_sentence_words` tokens emitidos, como lista (la oración corta reciente)."""
         return self.emitted_tokens[-self.settings.max_sentence_words :]
 
     @property
     def display_text(self) -> str:
+        """Texto acumulado completo, sin espacios sobrantes en los extremos."""
         return self.text.strip()
 
     def append_word(self, word: str) -> None:
+        """Agrega una palabra/frase al texto, separándola con espacio de lo anterior."""
         if self.text and not self.text.endswith(" "):
             self.text += " "
         self.text += f"{word} "
@@ -76,6 +80,9 @@ class HybridTranslationSession:
         self.last_token_type = "word"
 
     def append_letter(self, letter: str) -> None:
+        """Agrega una letra al texto. Las letras se concatenan sin espacio entre sí (deletreo),
+        pero se separan con un espacio de la palabra anterior para no pegarse a ella.
+        """
         if self.last_token_type == "word" and self.text and not self.text.endswith(" "):
             self.text += " "
         self.text += letter

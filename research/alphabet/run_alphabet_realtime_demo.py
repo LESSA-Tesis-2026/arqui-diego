@@ -1,4 +1,4 @@
-"""Run an OpenCV smoke test for the static alphabet classifier."""
+"""Ejecuta una prueba rápida (smoke test) de OpenCV para el clasificador del alfabeto estático."""
 
 import cv2
 import numpy as np
@@ -8,7 +8,7 @@ from tensorflow.keras.models import load_model
 from alphabet_config import *
 
 def draw_keypoints(image, results):
-    """Draw hand landmarks for the alphabet OpenCV smoke-test preview."""
+    """Dibuja los landmarks de mano para la vista previa de prueba rápida (smoke-test) de OpenCV del alfabeto."""
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
     if results.left_hand_landmarks:
@@ -17,14 +17,14 @@ def draw_keypoints(image, results):
         mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
 def real_time_alphabet(threshold=0.80):
-    """Run the static alphabet classifier against live webcam frames.
+    """Ejecuta el clasificador del alfabeto estático sobre fotogramas de webcam en vivo.
 
-    A short voting buffer debounces predictions so the displayed letter changes only
-    after several matching frames."""
+    Un búfer de votación corto estabiliza (debounce) las predicciones para que la letra mostrada cambie solo
+    después de varios fotogramas coincidentes."""
     model = load_model(MODEL_PATH)
     mp_holistic = mp.solutions.holistic
 
-    # Debounce predictions with a short rolling buffer.
+    # Estabiliza (debounce) las predicciones con un búfer deslizante corto.
     BUFFER_SIZE = 5
     predictions_buffer = collections.deque(maxlen=BUFFER_SIZE)
     current_letter = "-"
@@ -40,13 +40,13 @@ def real_time_alphabet(threshold=0.80):
             draw_keypoints(image, results)
 
             if results.left_hand_landmarks or results.right_hand_landmarks:
-                # Extract the current frame as a 306-value feature vector.
+                # Extrae el fotograma actual como un vector de características de 306 valores.
                 keypoints = extract_keypoints(results)
 
-                # Add the batch dimension expected by Keras: (1, 306).
+                # Agrega la dimensión de batch que Keras espera: (1, 306).
                 keypoints_reshaped = np.expand_dims(keypoints, axis=0)
 
-                # Run one static-frame prediction.
+                # Ejecuta una predicción de un solo fotograma estático.
                 res = model.predict(keypoints_reshaped, verbose=0)[0]
                 best_match_idx = np.argmax(res)
 
@@ -57,16 +57,16 @@ def real_time_alphabet(threshold=0.80):
 
                 predictions_buffer.append(predicted_char)
 
-                # Vote across recent frames to stabilize the display.
+                # Vota entre los fotogramas recientes para estabilizar la visualización.
                 word_counts = collections.Counter(predictions_buffer)
                 most_common, count = word_counts.most_common(1)[0]
-                if count >= 3: # Require three of the last five frames to match.
+                if count >= 3: # Requiere que tres de los últimos cinco fotogramas coincidan.
                     current_letter = most_common
             else:
                 current_letter = "-"
                 predictions_buffer.clear()
 
-            # --- OpenCV interface ---
+            # --- Interfaz de OpenCV ---
             cv2.rectangle(image, (0, 0), (640, 60), (245, 117, 16), -1)
             cv2.putText(image, f"LETTER: {current_letter}", (10, 40),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3, cv2.LINE_AA)

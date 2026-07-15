@@ -1,16 +1,16 @@
-# Research Developer Notes
+# Notas de desarrollo de investigación
 
-This document explains the non-obvious decisions in the research code. It is meant for future developers who need to extend the datasets, retrain a model, or compare a new artifact with the runtime application.
+Este documento explica las decisiones no evidentes del código de investigación. Está pensado para futuros desarrolladores que necesiten ampliar los datasets, reentrenar un modelo o comparar un nuevo artefacto con la aplicación de ejecución.
 
-## 1. Labels are model contracts
+## 1. Las etiquetas son contratos del modelo
 
-The Spanish word/phrase labels in `research/words/word_config.py` and the alphabet labels in `research/alphabet/alphabet_config.py` are not just display text. They define the class index order used during training and inference.
+Las etiquetas de palabra/frase en español en `research/words/word_config.py` y las etiquetas del alfabeto en `research/alphabet/alphabet_config.py` no son solo texto para mostrar. Definen el orden de los índices de clase que se usa durante el entrenamiento y la inferencia.
 
-If a label is renamed, added, removed, or reordered, retrain the corresponding model and update the runtime label order in the API at the same time. A model artifact and a label list with different ordering will produce wrong translations even if the code runs successfully.
+Si una etiqueta se renombra, se agrega, se elimina o se reordena, reentrene el modelo correspondiente y actualice el orden de etiquetas de ejecución en la API al mismo tiempo. Un artefacto de modelo y una lista de etiquetas con un orden distinto producirán traducciones incorrectas incluso si el código se ejecuta correctamente.
 
-## 2. Feature vector contracts
+## 2. Contratos del vector de características
 
-Both research pipelines produce a `306` value position vector per frame:
+Ambos pipelines de investigación producen un vector de posición de `306` valores por fotograma:
 
 ```text
 33 pose landmarks x 4 values      = 132
@@ -20,46 +20,46 @@ Both research pipelines produce a `306` value position vector per frame:
 Total                             = 306
 ```
 
-The active word/phrase model expands this to `918` values per frame by concatenating:
+El modelo de palabra/frase activo expande esto a `918` valores por fotograma al concatenar:
 
 ```text
 position + velocity + acceleration
 306      + 306      + 306          = 918
 ```
 
-The runtime API must use the same order. Changing the order of pose/face/hand blocks or temporal features requires retraining.
+La API de ejecución debe usar el mismo orden. Cambiar el orden de los bloques de pose/rostro/mano o de las características temporales requiere reentrenar.
 
-## 3. Nose-relative coordinates
+## 3. Coordenadas relativas a la nariz
 
-The extraction helpers subtract the nose landmark from pose, selected face, and hand coordinates. This makes samples less sensitive to where the signer stands in the camera frame. If the pose is not detected, the anchor becomes `(0, 0, 0)` and missing landmark groups are filled with zeros.
+Los ayudantes de extracción restan el punto de referencia (landmark) de la nariz de las coordenadas de pose, del rostro seleccionado y de las manos. Esto hace que las muestras sean menos sensibles a la posición donde se ubica el señante dentro del fotograma de la cámara. Si no se detecta la pose, el ancla pasa a ser `(0, 0, 0)` y los grupos de landmarks faltantes se rellenan con ceros.
 
-Zeros are deliberate: training and runtime code use masking/padding to handle missing frames or absent hands. Do not replace missing data with random values.
+Los ceros son intencionales: el código de entrenamiento y de ejecución usa enmascaramiento/relleno (masking/padding) para manejar fotogramas faltantes o manos ausentes. No reemplace los datos faltantes con valores aleatorios.
 
-## 4. Why visibility channels are preserved during augmentation
+## 4. Por qué los canales de visibilidad se preservan durante la aumentación
 
-Pose landmarks include a visibility value every four entries. The training augmentation adds small coordinate noise, then restores every `3::4` visibility channel. Visibility is a MediaPipe confidence signal, not a spatial coordinate, so corrupting it with Gaussian noise would teach the model unrealistic confidence patterns.
+Los landmarks de pose incluyen un valor de visibilidad cada cuatro entradas. La aumentación de entrenamiento agrega un pequeño ruido de coordenadas y luego restaura cada canal de visibilidad `3::4`. La visibilidad es una señal de confianza de MediaPipe, no una coordenada espacial, así que corromperla con ruido gaussiano le enseñaría al modelo patrones de confianza poco realistas.
 
-## 5. Real-time smoothing and duplicate guards
+## 5. Suavizado en tiempo real y protecciones contra duplicados
 
-The OpenCV demo scripts use short voting buffers before accepting a prediction. This reduces flicker from frame-to-frame softmax noise.
+Los scripts de demo de OpenCV usan búferes de votación cortos antes de aceptar una predicción. Esto reduce el parpadeo causado por el ruido de softmax entre fotogramas.
 
-Word demos also keep `last_emitted_word` and `rest_counter`:
+Los demos de palabras también mantienen `last_emitted_word` y `rest_counter`:
 
-- `last_emitted_word` prevents repeated output like `hola hola hola` while the same sign remains stable.
-- `rest_counter` resets that duplicate guard only after sustained `nada`/no-output frames, allowing the signer to intentionally repeat a word after a pause.
+- `last_emitted_word` evita salidas repetidas como `hola hola hola` mientras la misma seña permanece estable.
+- `rest_counter` reinicia esa protección contra duplicados solo después de fotogramas sostenidos de `nada`/sin salida, lo que permite que el señante repita intencionalmente una palabra tras una pausa.
 
-Alphabet demos use a similar duplicate guard for repeated letters. The signer must release or destabilize the current letter before the same letter can be emitted again.
+Los demos del alfabeto usan una protección contra duplicados similar para letras repetidas. El señante debe soltar o desestabilizar la letra actual antes de que la misma letra pueda emitirse de nuevo.
 
-## 6. Generated outputs are not source
+## 6. Las salidas generadas no son fuente
 
-The research folders intentionally ignore raw media, H5 datasets, model files, metrics, local environments, and cache files. Source control should contain scripts and documentation; generated outputs should be shared as separate thesis/demo artifacts when needed.
+Las carpetas de investigación ignoran intencionalmente los medios sin procesar, los datasets H5, los archivos de modelo, las métricas, los entornos locales y los archivos de caché. El control de versiones debe contener scripts y documentación; las salidas generadas deben compartirse como artefactos de tesis/demo separados cuando sea necesario.
 
-## 7. Recommended extension process
+## 7. Proceso de extensión recomendado
 
-1. Add or adjust labels in the relevant config file.
-2. Collect enough samples for the new or changed labels.
-3. Extract keypoints using the matching pipeline.
-4. Train a new model artifact.
-5. Review metrics and smoke-test with the OpenCV demo.
-6. Copy the validated artifact to the root `models/` runtime folder.
-7. Update API runtime labels/settings and tests if the model contract changed.
+1. Agregue o ajuste etiquetas en el archivo de configuración correspondiente.
+2. Recolecte suficientes muestras para las etiquetas nuevas o modificadas.
+3. Extraiga los keypoints usando el pipeline correspondiente.
+4. Entrene un nuevo artefacto de modelo.
+5. Revise las métricas y haga una prueba rápida (smoke-test) con el demo de OpenCV.
+6. Copie el artefacto validado a la carpeta de ejecución `models/` en la raíz.
+7. Actualice las etiquetas/ajustes de ejecución de la API y las pruebas si cambió el contrato del modelo.

@@ -1,7 +1,7 @@
-"""Run an OpenCV smoke test for the temporal word/phrase model.
+"""Ejecuta una prueba rápida (smoke test) de OpenCV para el modelo temporal de palabras/frases.
 
-This demo validates a trained artifact locally with webcam input. The thesis demo
-path remains the FastAPI backend plus the Next.js frontend.
+Este demo valida un artefacto entrenado localmente con entrada de webcam. La ruta de la demo de
+tesis sigue siendo el backend de FastAPI más el frontend de Next.js.
 """
 
 import cv2
@@ -12,9 +12,9 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import collections
 from word_config import *
 
-# Keep the same drawing helper used by the research capture scripts.
+# Conserva el mismo ayudante de dibujo usado por los scripts de captura de investigación.
 def draw_keypoints(image, results):
-    """Draw MediaPipe pose and hand landmarks for the OpenCV smoke-test preview."""
+    """Dibuja los landmarks de pose y manos de MediaPipe para la vista previa de prueba rápida (smoke-test) de OpenCV."""
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
     if results.pose_landmarks:
@@ -25,10 +25,10 @@ def draw_keypoints(image, results):
         mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
 def real_time_translation(threshold=0.65):
-    """Run the active temporal word/phrase model against live webcam frames.
+    """Ejecuta el modelo temporal activo de palabras/frases sobre fotogramas de webcam en vivo.
 
-    The demo reproduces runtime inference: collect a rolling window, compute velocity
-    and acceleration, pad to 60 frames, then stabilize predictions through voting."""
+    El demo reproduce la inferencia de ejecución: recolecta una ventana deslizante, calcula la velocidad
+    y la aceleración, rellena a 60 fotogramas y luego estabiliza las predicciones mediante votación."""
     model = load_model(MODEL_PATH)
     mp_holistic = mp.solutions.holistic
 
@@ -54,32 +54,32 @@ def real_time_translation(threshold=0.65):
             image, results = mediapipe_detection(frame, holistic)
             draw_keypoints(image, results)
 
-            # --- PHASE 1: POSITION EXTRACTION (306 values) ---
+            # --- FASE 1: EXTRACCIÓN DE POSICIÓN (306 valores) ---
             if results.left_hand_landmarks or results.right_hand_landmarks:
                 keypoints = extract_keypoints(results)
                 sequence.append(keypoints)
             else:
                 sequence.append(np.zeros(LENGTH_KEYPOINTS))
 
-            # --- PHASE 2: REAL-TIME KINEMATICS AND PREDICTION ---
+            # --- FASE 2: CINEMÁTICA Y PREDICCIÓN EN TIEMPO REAL ---
             if len(sequence) == WINDOW_SIZE:
 
-                # Convert the rolling memory into a numeric matrix.
+                # Convierte la memoria deslizante en una matriz numérica.
                 seq_array = np.array(sequence)
 
-                # Compute velocity from the live rolling window.
+                # Calcula la velocidad a partir de la ventana deslizante en vivo.
                 delta = np.vstack([seq_array[0:1, :], np.diff(seq_array, axis=0)])
 
-                # Compute acceleration (delta-delta) on the fly.
+                # Calcula la aceleración (delta-delta) sobre la marcha.
                 delta_delta = np.vstack([delta[0:1, :], np.diff(delta, axis=0)])
 
-                # Merge position + velocity + acceleration (306 + 306 + 306 = 918 features).
+                # Combina posición + velocidad + aceleración (306 + 306 + 306 = 918 características).
                 combined_seq = np.concatenate([seq_array, delta, delta_delta], axis=-1)
 
-                # Pad to MAX_FRAMES (60) so the live tensor matches the trained model shape.
+                # Rellena hasta MAX_FRAMES (60) para que el tensor en vivo coincida con la forma del modelo entrenado.
                 pad_seq = pad_sequences([combined_seq], maxlen=MAX_FRAMES, padding='post', dtype='float32')
 
-                # 6. Prediction
+                # 6. Predicción
                 res = model.predict(pad_seq, verbose=0)[0]
                 current_probs = res
                 best_match_idx = np.argmax(res)
@@ -91,7 +91,7 @@ def real_time_translation(threshold=0.65):
 
                 predictions_buffer.append(current_word)
 
-                # --- PHASE 3: STATE MACHINE AND SMOOTHING ---
+                # --- FASE 3: MÁQUINA DE ESTADOS Y SUAVIZADO ---
                 word_counts = collections.Counter(predictions_buffer)
                 most_common_word, count = word_counts.most_common(1)[0]
 
@@ -112,7 +112,7 @@ def real_time_translation(threshold=0.65):
                     if rest_counter > 15:
                         last_emitted_word = "nada"
 
-            # --- GRAPHICAL INTERFACE ---
+            # --- INTERFAZ GRÁFICA ---
             cv2.rectangle(image, (0, 0), (640, 40), (245, 117, 16), -1)
             cv2.putText(image, ' '.join(sentence).upper(), (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)

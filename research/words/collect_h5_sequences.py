@@ -1,8 +1,8 @@
-"""Collect dynamic LESSA word/phrase samples directly into H5 sequence files.
+"""Recolecta muestras dinámicas de palabras/frases de LESSA directamente en archivos de secuencias H5.
 
-Use this script when raw video review is not needed. It appends new samples to the
-existing per-label H5 file, which lets a capture session resume without deleting
-previously recorded sequences.
+Use este script cuando no se necesite revisar el video sin procesar. Agrega nuevas muestras al
+archivo H5 existente por etiqueta, lo que permite reanudar una sesión de captura sin eliminar
+las secuencias grabadas previamente.
 """
 
 import cv2
@@ -13,14 +13,14 @@ import os
 from word_config import *
 
 def draw_custom_keypoints(image, results):
-    """Draw the same compact landmark overlay used by the word/phrase capture tools.
+    """Dibuja la misma superposición compacta de landmarks que usan las herramientas de captura de palabras/frases.
 
-    Only selected face points are drawn because the full face mesh hides the hands and
-    makes it harder to review whether a capture is usable."""
+    Solo se dibujan los puntos de rostro seleccionados porque la malla facial completa oculta las manos y
+    dificulta revisar si una captura es utilizable."""
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
 
-    # Draw only the selected face landmarks to keep the capture overlay readable.
+    # Dibuja solo los landmarks de rostro seleccionados para mantener legible la superposición de captura.
     if results.face_landmarks:
         h, w, _ = image.shape
         for idx in SELECTED_FACE_INDICES:
@@ -28,7 +28,7 @@ def draw_custom_keypoints(image, results):
             cx, cy = int(landmark.x * w), int(landmark.y * h)
             cv2.circle(image, (cx, cy), 3, (0, 255, 255), -1)
 
-    # Draw pose and hand landmarks with MediaPipe's standard connections.
+    # Dibuja los landmarks de pose y manos con las conexiones estándar de MediaPipe.
     if results.pose_landmarks:
         mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
             mp_drawing.DrawingSpec(color=(80, 22, 10), thickness=2, circle_radius=4),
@@ -43,12 +43,12 @@ def draw_custom_keypoints(image, results):
             mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
 def collect_dynamic_h5_sequences(word, target_samples=60):
-    """Append new dynamic-sign sequences for one label into its H5 dataset.
+    """Agrega nuevas secuencias de señas dinámicas de una etiqueta a su dataset H5.
 
-    Each sample stores a variable-length list of 306-value frame vectors. Training
-    pads/truncates later, so the capture step preserves the natural sign duration."""
+    Cada muestra almacena una lista de longitud variable de vectores de fotograma de 306 valores. El entrenamiento
+    rellena/trunca después, así que el paso de captura preserva la duración natural de la seña."""
 
-    # The rest class needs extra examples because it acts as the transition/no-output state.
+    # La clase de reposo necesita ejemplos adicionales porque actúa como el estado de transición/sin salida.
     if word.lower() == "nada":
         target_samples = int(target_samples * 1.75)
         print(f"\n[INFO] Class 'nada' detected. Target adjusted automatically a {target_samples} samples.")
@@ -60,25 +60,25 @@ def collect_dynamic_h5_sequences(word, target_samples=60):
     cap = cv2.VideoCapture(0)
 
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-        # Append mode lets interrupted sessions resume without losing previously captured samples.
+        # El modo de anexado (append) permite reanudar sesiones interrumpidas sin perder las muestras capturadas previamente.
         with h5py.File(file_path, 'a') as hf:
 
             existing_samples = len(hf.keys())
 
-            # Skip labels that already reached the requested target sample count.
+            # Omite las etiquetas que ya alcanzaron la cantidad de muestras objetivo solicitada.
             if existing_samples >= target_samples:
                 print(f"[*] Word '{word.upper()}' already has {existing_samples} samples. Skipping...")
                 cap.release()
                 cv2.destroyAllWindows()
                 return
 
-            # Compute only the missing samples so the H5 file can be grown incrementally.
+            # Calcula solo las muestras faltantes para que el archivo H5 pueda crecer de forma incremental.
             samples_to_record = target_samples - existing_samples
             print(f"\n--- COLLECTING SAMPLES FOR: {word.upper()} ---")
             print(f"Existing samples: {existing_samples} | Remaining: {samples_to_record} to reach target of {target_samples}.")
 
             for i in range(samples_to_record):
-                # Use the absolute sample index to avoid overwriting existing datasets.
+                # Usa el índice absoluto de la muestra para evitar sobrescribir datasets existentes.
                 current_sample_idx = existing_samples + i
                 sequence_data = []
                 recording = False
@@ -90,7 +90,7 @@ def collect_dynamic_h5_sequences(word, target_samples=60):
                     image, results = mediapipe_detection(frame, holistic)
                     draw_custom_keypoints(image, results)
 
-                    # Show progress against the total requested sample count.
+                    # Muestra el progreso respecto a la cantidad total de muestras solicitada.
                     cv2.putText(image, f"Label: {word} | Sample: {current_sample_idx + 1}/{target_samples}", (10, 30),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
 
@@ -112,7 +112,7 @@ def collect_dynamic_h5_sequences(word, target_samples=60):
                     elif key == ord('s') and recording:
                         recording = False
 
-                        # Store the sequence with the stable absolute sample index.
+                        # Almacena la secuencia con el índice absoluto de muestra estable.
                         dataset_name = f"sample_{current_sample_idx}"
                         hf.create_dataset(dataset_name, data=np.array(sequence_data))
                         print(f"Sample {current_sample_idx + 1} saved with {len(sequence_data)} frames.")
@@ -127,7 +127,7 @@ def collect_dynamic_h5_sequences(word, target_samples=60):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    # Global target: existing samples are kept and only missing samples are appended.
+    # Objetivo global: se conservan las muestras existentes y solo se agregan las faltantes.
     # ACTUAL: 80
     TARGET_SAMPLES = 80
 

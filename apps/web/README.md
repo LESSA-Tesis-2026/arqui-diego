@@ -1,8 +1,8 @@
 # LESSA Translation Web
 
-Immersive browser experience for real-time LESSA-to-Spanish translation. The frontend owns camera access, live translation controls, progressive Spanish output, and optional browser speech feedback while streaming frames to the FastAPI backend.
+Experiencia inmersiva en el navegador para la traducción en tiempo real de LESSA a español. El frontend gestiona el acceso a la cámara, los controles de traducción en vivo, la salida progresiva en español y la retroalimentación de voz opcional del navegador mientras transmite fotogramas al backend de FastAPI.
 
-## Structure
+## Estructura
 
 ```text
 src/
@@ -13,18 +13,18 @@ src/
 └── lib/                         API, WebSocket, label-formatting utilities
 ```
 
-Key modules:
+Módulos clave:
 
-- `components/translation/translation-experience.tsx`: orchestrates the experience.
-- `hooks/use-camera.ts`: camera permission, stream ownership, cleanup.
-- `hooks/use-frame-streaming.ts`: canvas capture, throttling, WebSocket backpressure.
-- `hooks/use-translation-socket.ts`: API availability, WebSocket lifecycle, translation state, reset handling.
-- `hooks/use-speech-synthesis.ts`: hydration-safe Web Speech API integration.
-- `lib/labels.ts`: maps stable model labels to Spanish display text.
+- `components/translation/translation-experience.tsx`: orquesta la experiencia.
+- `hooks/use-camera.ts`: permiso de cámara, control del stream, limpieza.
+- `hooks/use-frame-streaming.ts`: captura de canvas, limitación (throttling), backpressure de WebSocket.
+- `hooks/use-translation-socket.ts`: disponibilidad de la API, ciclo de vida del WebSocket, estado de traducción, manejo del reinicio.
+- `hooks/use-speech-synthesis.ts`: integración de la Web Speech API segura frente a la hydration.
+- `lib/labels.ts`: mapea las etiquetas estables del modelo a texto de visualización en español.
 
-## Language and Labels
+## Idioma y Etiquetas
 
-User-facing text is Spanish. Model labels are stable backend/model contracts and should not be renamed in frontend code. Use `lib/labels.ts` when a model label needs display formatting.
+El texto de cara al usuario está en español. Las etiquetas del modelo son contratos estables del backend/modelo y no deben renombrarse en el código del frontend. Use `lib/labels.ts` cuando una etiqueta del modelo necesite formato de visualización.
 
 ## Tech
 
@@ -33,63 +33,63 @@ User-facing text is Spanish. Model labels are stable backend/model contracts and
 - TypeScript
 - Tailwind CSS
 - shadcn/ui-style primitives
-- `pnpm` for package management
+- `pnpm` para la gestión de packages
 
-## Environment
+## Entorno
 
-`.env.example` is the tracked source of truth for frontend configuration. Create a local `.env` from it when running the web app outside Docker:
+`.env.example` es la fuente de verdad versionada para la configuración del frontend. Cree un `.env` local a partir de él cuando ejecute la aplicación web fuera de Docker:
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` is local-only. Docker-specific values are declared in the root `docker-compose.yml`.
+`.env` es únicamente local. Los valores específicos de Docker se declaran en el `docker-compose.yml` de la raíz.
 
 Variables:
 
-- `NEXT_PUBLIC_API_URL`: FastAPI backend URL. Defaults to `http://localhost:8000` for local development and Docker because the browser reaches the API through the host-mapped port.
+- `NEXT_PUBLIC_API_URL`: URL del backend de FastAPI. Su valor por defecto es `http://localhost:8000` para el desarrollo local y Docker, porque el navegador accede a la API a través del puerto mapeado en el host.
 
-## Install
+## Instalación
 
 ```bash
 pnpm install
 ```
 
-## Run
+## Ejecución
 
-Start the backend first, then run:
+Inicie primero el backend y luego ejecute:
 
 ```bash
 pnpm dev
 ```
 
-Open:
+Abra:
 
 ```text
 http://localhost:3000
 ```
 
-## Main Flow
+## Flujo Principal
 
-- Activate camera permission.
-- Start live translation.
-- Stream camera frames to `WS /api/v1/translate/stream`.
-- Display recognition status and progressive Spanish text.
-- Speak stable accepted emissions when voice feedback is enabled and supported by the browser.
-- Pause or clear the current translation session.
+- Active el permiso de la cámara.
+- Inicie la traducción en vivo.
+- Transmita los fotogramas de la cámara a `WS /api/v1/translate/stream`.
+- Muestre el estado de reconocimiento y el texto progresivo en español.
+- Reproduzca por voz las emisiones estables aceptadas cuando la retroalimentación de voz esté habilitada y sea compatible con el navegador.
+- Pause o borre la sesión de traducción actual.
 
-## Browser API Notes
+## Notas sobre las APIs del Navegador
 
-- The browser requires camera permission for live translation.
-- Frame streaming is throttled and drops frames if WebSocket bytes are queued, avoiding stale delayed predictions.
-- Speech synthesis is detected after hydration to avoid server/client render mismatches.
-- Audio is triggered only from stable backend emissions (`emitted_token` or `emitted_word`), never from unstable frame-level predictions.
+- El navegador requiere permiso de cámara para la traducción en vivo.
+- El streaming de fotogramas está limitado (throttling) y descarta fotogramas si hay bytes de WebSocket en cola, evitando predicciones obsoletas y retrasadas.
+- La síntesis de voz se detecta después de la hydration para evitar discrepancias de render entre servidor y cliente.
+- El audio se activa únicamente a partir de emisiones estables del backend (`emitted_token` o `emitted_word`), nunca a partir de predicciones inestables a nivel de fotograma.
 
-## Generated Files
+## Archivos Generados
 
-`next-env.d.ts` is generated by Next.js and intentionally ignored/untracked. It can change between development and production builds, so source files should not depend on editing it by hand.
+`next-env.d.ts` es generado por Next.js y se ignora/no se versiona de forma intencional. Puede cambiar entre los builds de desarrollo y producción, por lo que los archivos fuente no deben depender de editarlo a mano.
 
-## Checks
+## Verificaciones
 
 ```bash
 pnpm lint

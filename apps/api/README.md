@@ -1,8 +1,8 @@
 # LESSA Translation API
 
-FastAPI backend for serving the hybrid LESSA-to-Spanish translation models. This app owns the runtime boundary around the trained word `.keras` artifact and optional alphabet `.h5` artifact, then exposes health, model metadata, and live translation streaming endpoints.
+Backend en FastAPI que sirve los modelos híbridos de traducción de LESSA a español. Esta aplicación es responsable del límite de ejecución alrededor del artefacto de palabras `.keras` entrenado y del artefacto de alfabeto `.h5` opcional, y luego expone los endpoints de salud, metadatos del modelo y streaming de traducción en vivo.
 
-## Structure
+## Estructura
 
 ```text
 app/
@@ -17,68 +17,68 @@ app/
     └── schemas.py         Pydantic API/WebSocket schemas
 ```
 
-Routes should stay thin. Add model behavior under `app.lessa`, not inside route handlers.
+Las rutas deben mantenerse ligeras. Agregue el comportamiento del modelo bajo `app.lessa`, no dentro de los manejadores de rutas.
 
-## Tech
+## Tecnología
 
 - FastAPI
 - TensorFlow/Keras
-- MediaPipe Holistic preprocessing
-- OpenCV frame decoding
-- `uv` for Python environment and dependency management
+- Preprocesamiento con MediaPipe Holistic
+- Decodificación de fotogramas con OpenCV
+- `uv` para el manejo del entorno de Python y de dependencias
 
-## Model Contract
+## Contrato del modelo
 
-The labels in `app/lessa/labels.py` are trained-model contracts. Preserve order and spelling unless a new model artifact is trained with a different contract.
+Las etiquetas en `app/lessa/labels.py` son contratos del modelo entrenado. Conserve el orden y la ortografía a menos que se entrene un nuevo artefacto de modelo con un contrato diferente.
 
-Current word-model input configuration:
+Configuración actual de entrada del modelo de palabras:
 
-- sequence length: `60`
-- base feature length: `306`
-- temporal delta order: `2`
-- final feature length: `918`
+- longitud de secuencia: `60`
+- longitud base de características: `306`
+- orden de delta temporal: `2`
+- longitud final de características: `918`
 
-The word and alphabet models use different selected face-index orders. Keep those orders stable in `app/lessa/preprocessing.py`.
+Los modelos de palabras y de alfabeto utilizan diferentes órdenes de índices de rostro seleccionados. Mantenga esos órdenes estables en `app/lessa/preprocessing.py`.
 
-## Environment
+## Entorno
 
-`.env.example` is the tracked source of truth for backend configuration. Create a local `.env` from it when running the API outside Docker:
+`.env.example` es la fuente de verdad versionada para la configuración del backend. Cree un `.env` local a partir de él cuando ejecute la API fuera de Docker:
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` is local-only. Docker-specific values are declared in the root `docker-compose.yml`.
+`.env` es solo local. Los valores específicos de Docker se declaran en el `docker-compose.yml` de la raíz.
 
-Important variables:
+Variables importantes:
 
-- `LESSA_WORD_MODEL_PATH`: path to the word `.keras` model artifact. Relative paths are resolved from `apps/api`. By default this points to the repo-root `models/modelo_señas_lstm.keras`; in Docker, Compose mounts the root `models/` directory at `/models`.
-- `LESSA_ALPHABET_MODEL_PATH`: path to the optional alphabet `.h5` model artifact. If it is missing, the API still runs and marks Alphabet mode unavailable.
-- `LESSA_CORS_ORIGINS`: JSON list of allowed frontend origins.
-- `LESSA_SEQUENCE_LENGTH`: word model sequence length. Current model expects `60`.
-- `LESSA_WINDOW_SIZE`: active sliding window before padding. Current runtime uses `25` frames.
-- `LESSA_BASE_FEATURE_LENGTH`: position-only feature length. Current preprocessing uses `306`.
-- `LESSA_USE_TEMPORAL_FEATURES`: current word model expects temporal deltas enabled.
-- `LESSA_TEMPORAL_DELTA_ORDER`: number of temporal derivative groups appended to each position vector.
-- `LESSA_HYBRID_MOTION_THRESHOLD`: Auto mode threshold that routes moving signs to Words and static signs to Alphabet.
-- `LESSA_SETTLE_SECONDS`: seconds the signer must hold/sign before the API starts inference for the current mode.
-- `LESSA_INFERENCE_INTERVAL_SECONDS`: minimum delay between model inference calls after settling.
+- `LESSA_WORD_MODEL_PATH`: ruta al artefacto del modelo de palabras `.keras`. Las rutas relativas se resuelven desde `apps/api`. Por defecto apunta al `models/modelo_señas_lstm.keras` de la raíz del repositorio; en Docker, Compose monta el directorio `models/` de la raíz en `/models`.
+- `LESSA_ALPHABET_MODEL_PATH`: ruta al artefacto del modelo de alfabeto `.h5` opcional. Si falta, la API igual se ejecuta y marca el modo Alfabeto como no disponible.
+- `LESSA_CORS_ORIGINS`: lista JSON de orígenes de frontend permitidos.
+- `LESSA_SEQUENCE_LENGTH`: longitud de secuencia del modelo de palabras. El modelo actual espera `60`.
+- `LESSA_WINDOW_SIZE`: ventana deslizante activa antes del relleno. La ejecución actual usa `25` fotogramas.
+- `LESSA_BASE_FEATURE_LENGTH`: longitud de características solo de posición. El preprocesamiento actual usa `306`.
+- `LESSA_USE_TEMPORAL_FEATURES`: el modelo de palabras actual espera los deltas temporales habilitados.
+- `LESSA_TEMPORAL_DELTA_ORDER`: número de grupos de derivadas temporales que se agregan a cada vector de posición.
+- `LESSA_HYBRID_MOTION_THRESHOLD`: umbral del modo Auto que dirige las señas en movimiento a Palabras y las señas estáticas a Alfabeto.
+- `LESSA_SETTLE_SECONDS`: segundos que la persona señante debe mantener/hacer la seña antes de que la API inicie la inferencia para el modo actual.
+- `LESSA_INFERENCE_INTERVAL_SECONDS`: retraso mínimo entre llamadas de inferencia del modelo después de la estabilización.
 
-For local development, the default `.env.example` points to the repo-root `models/` folder.
+Para el desarrollo local, el `.env.example` por defecto apunta a la carpeta `models/` de la raíz del repositorio.
 
-## Install
+## Instalación
 
 ```bash
 uv sync
 ```
 
-## Run
+## Ejecución
 
 ```bash
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at:
+La API estará disponible en:
 
 ```text
 http://localhost:8000
@@ -86,13 +86,13 @@ http://localhost:8000
 
 ## Endpoints
 
-- `GET /api/v1/health`: API reachability.
-- `GET /api/v1/model/info`: word/alphabet availability, label lists, input shapes, and inference configuration.
-- `WS /api/v1/translate/stream`: live frame streaming for translation.
+- `GET /api/v1/health`: accesibilidad de la API.
+- `GET /api/v1/model/info`: disponibilidad de palabras/alfabeto, listas de etiquetas, formas de entrada y configuración de inferencia.
+- `WS /api/v1/translate/stream`: streaming de fotogramas en vivo para la traducción.
 
-## WebSocket Messages
+## Mensajes de WebSocket
 
-Frame message:
+Mensaje de fotograma (frame):
 
 ```json
 {
@@ -102,7 +102,7 @@ Frame message:
 }
 ```
 
-Reset message:
+Mensaje de reinicio (reset):
 
 ```json
 {
@@ -110,7 +110,7 @@ Reset message:
 }
 ```
 
-Typical translation response:
+Respuesta de traducción típica:
 
 ```json
 {
@@ -137,7 +137,7 @@ Typical translation response:
 }
 ```
 
-## Checks
+## Verificaciones
 
 ```bash
 uv run pytest

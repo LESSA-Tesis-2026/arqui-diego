@@ -8,7 +8,7 @@ from app.lessa.schemas import RuntimeModelInfo
 
 
 class ModelRuntime:
-    """Lazy Keras model loader with safe availability reporting."""
+    """Cargador diferido de modelos Keras con reporte seguro de disponibilidad."""
 
     def __init__(self, model_path: Path, labels: list[str]) -> None:
         self.model_path = model_path
@@ -58,7 +58,7 @@ class ModelRuntime:
 
         try:
             self._model = load_model(self.model_path, compile=False)
-        except Exception as exc:  # pragma: no cover - depends on local artifact compatibility
+        except Exception as exc:  # pragma: no cover - depende de la compatibilidad del artefacto local
             self._load_error = str(exc)
 
 

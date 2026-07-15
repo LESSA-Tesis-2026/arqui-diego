@@ -1,8 +1,8 @@
-# LESSA Word/Phrase Research Pipeline
+# Pipeline de investigación de palabras/frases de LESSA
 
-`research/words` contains the dynamic-sign workflow for collecting word/phrase samples, extracting MediaPipe features, training the temporal model, and validating it with local OpenCV demos. The production API mirrors the feature contract documented here before loading `models/modelo_señas_lstm.keras`.
+`research/words` contiene el flujo de trabajo de señas dinámicas para recolectar muestras de palabras/frases, extraer características de MediaPipe, entrenar el modelo temporal y validarlo con demos locales de OpenCV. La API de producción replica el contrato de características documentado aquí antes de cargar `models/modelo_señas_lstm.keras`.
 
-## File map
+## Mapa de archivos
 
 ```text
 research/words/
@@ -19,7 +19,7 @@ research/words/
 └── requirements_wsl.txt                 # WSL-specific dependency set
 ```
 
-Generated folders are local outputs:
+Las carpetas generadas son salidas locales:
 
 ```text
 keypoint_datasets/  # H5 datasets, one file per word/phrase label
@@ -31,15 +31,15 @@ experiments/        # Ad-hoc experiment outputs
 .venv/              # Local Python environment
 ```
 
-## Label contract
+## Contrato de etiquetas
 
-Labels are defined in `word_config.py` and must match the trained word model order exactly. Spanish labels are intentional because they represent LESSA output classes and user-facing translation tokens.
+Las etiquetas se definen en `word_config.py` y deben coincidir exactamente con el orden del modelo de palabras entrenado. Las etiquetas en español son intencionales porque representan las clases de salida de LESSA y los tokens de traducción orientados al usuario.
 
-`nada` is a rest/no-output state. The live translator uses it to decide when the last emitted word can become eligible for repetition again, so it must stay synchronized with the trained model and runtime state machine.
+`nada` es un estado de reposo/sin salida. El traductor en vivo lo usa para decidir cuándo la última palabra emitida puede volver a ser elegible para repetición, así que debe mantenerse sincronizado con el modelo entrenado y la máquina de estados de ejecución.
 
-## Feature contract
+## Contrato de características
 
-Each raw frame produces `306` position features:
+Cada fotograma sin procesar produce `306` características de posición:
 
 ```text
 pose:          33 landmarks x 4 values = 132
@@ -48,13 +48,13 @@ left hand:     21 landmarks x 3 values = 63
 right hand:    21 landmarks x 3 values = 63
 ```
 
-The active model uses temporal features. `train_temporal_model.py` concatenates position, first-order velocity, and second-order acceleration, so each frame becomes `918` features. The API must preserve this exact feature order before inference.
+El modelo activo usa características temporales. `train_temporal_model.py` concatena la posición, la velocidad de primer orden y la aceleración de segundo orden, de modo que cada fotograma se convierte en `918` características. La API debe preservar este orden exacto de características antes de la inferencia.
 
-## Recommended execution order
+## Orden de ejecución recomendado
 
-### Path A: fastest capture path, direct to H5
+### Ruta A: la ruta de captura más rápida, directo a H5
 
-Use this path when the goal is to grow the training dataset quickly and raw videos are not needed for manual review.
+Use esta ruta cuando el objetivo sea aumentar rápidamente el dataset de entrenamiento y no se necesiten videos sin procesar para revisión manual.
 
 ```bash
 cd research/words
@@ -63,9 +63,9 @@ python train_temporal_model.py
 python run_temporal_realtime_demo.py
 ```
 
-### Path B: auditable capture path, videos first
+### Ruta B: la ruta de captura auditable, videos primero
 
-Use this path when you want raw videos available for review before extracting keypoints.
+Use esta ruta cuando quiera tener videos sin procesar disponibles para revisión antes de extraer los keypoints.
 
 ```bash
 cd research/words
@@ -75,28 +75,28 @@ python train_temporal_model.py
 python run_temporal_realtime_demo.py
 ```
 
-### Optional: merge H5 datasets
+### Opcional: fusionar datasets H5
 
-Use `merge_h5_datasets.py` only when two H5 files for the same label need to be combined. Edit the input file names in the script's main block before running it. This manual step is deliberate because merging can duplicate or overwrite sample names if the wrong files are selected.
+Use `merge_h5_datasets.py` solo cuando dos archivos H5 de la misma etiqueta necesiten combinarse. Edite los nombres de los archivos de entrada en el bloque principal del script antes de ejecutarlo. Este paso manual es intencional porque la fusión puede duplicar o sobrescribir nombres de muestras si se seleccionan los archivos equivocados.
 
 ```bash
 cd research/words
 python merge_h5_datasets.py
 ```
 
-## Runtime handoff
+## Entrega a ejecución
 
-Training writes model artifacts to the local `models/` folder inside this workspace. After validating a model, copy the selected artifact to the repository-root runtime folder:
+El entrenamiento escribe los artefactos de modelo en la carpeta `models/` local dentro de este espacio de trabajo. Después de validar un modelo, copie el artefacto seleccionado a la carpeta de ejecución en la raíz del repositorio:
 
 ```text
 models/modelo_señas_lstm.keras
 ```
 
-Then run the product path through the FastAPI backend and Next.js frontend. The OpenCV demos are research smoke tests, not the thesis-demo UI.
+Luego ejecute la ruta de producto a través del backend de FastAPI y el frontend de Next.js. Los demos de OpenCV son pruebas rápidas (smoke tests) de investigación, no la interfaz de la demo de tesis.
 
-## Practical capture notes
+## Notas prácticas de captura
 
-- Keep the signer centered so the nose-relative normalization has a stable anchor.
-- Capture multiple sessions per label when possible; variation in distance, speed, and lighting improves generalization.
-- Avoid augmenting validation or test data. Augmentation belongs only in the training split.
-- Check generated metrics after training before replacing the runtime artifact.
+- Mantenga al señante centrado para que la normalización relativa a la nariz tenga un ancla estable.
+- Capture varias sesiones por etiqueta cuando sea posible; la variación en distancia, velocidad e iluminación mejora la generalización.
+- Evite aumentar los datos de validación o de prueba. La aumentación pertenece únicamente al conjunto de entrenamiento.
+- Revise las métricas generadas después del entrenamiento antes de reemplazar el artefacto de ejecución.

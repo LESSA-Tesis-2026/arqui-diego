@@ -1,7 +1,7 @@
-"""Collect raw webcam images for each static LESSA alphabet class.
+"""Recolecta imágenes de webcam sin procesar para cada clase del alfabeto estático de LESSA.
 
-Run this before keypoint extraction. Existing images are counted first so capture
-sessions can be resumed without replacing previous samples.
+Ejecute esto antes de la extracción de keypoints. Las imágenes existentes se cuentan primero
+para que las sesiones de captura puedan reanudarse sin reemplazar las muestras previas.
 """
 
 import cv2
@@ -10,7 +10,7 @@ import time
 from alphabet_config import *
 
 def draw_landmarks(image, results):
-    """Draw MediaPipe landmarks on the preview frame so the operator can check hand visibility."""
+    """Dibuja los landmarks de MediaPipe sobre el fotograma de vista previa para que el operador pueda verificar la visibilidad de la mano."""
     mp_drawing = mp.solutions.drawing_utils
     mp_drawing_styles = mp.solutions.drawing_styles
     mp_holistic = mp.solutions.holistic
@@ -51,10 +51,10 @@ def draw_landmarks(image, results):
         )
 
 def collect_alphabet_images(letter, target_images=200, delay_seconds=0.1):
-    """Collect raw static-letter images for one alphabet class.
+    """Recolecta imágenes de letra estática sin procesar para una clase del alfabeto.
 
-    The script saves clean frames while showing an annotated preview. Captures are
-    throttled by `delay_seconds` so samples are not near-identical duplicates."""
+    El script guarda fotogramas limpios mientras muestra una vista previa anotada. Las capturas se
+    limitan mediante `delay_seconds` para que las muestras no sean duplicados casi idénticos."""
     letter_folder = os.path.join(DATASET_FOLDER, letter)
     create_folder_if_not_exists(letter_folder)
 
@@ -129,14 +129,14 @@ def collect_alphabet_images(letter, target_images=200, delay_seconds=0.1):
                     2,
                 )
 
-                # Timer gate controls the capture cadence.
+                # La compuerta del temporizador controla la cadencia de captura.
                 if time.time() - last_capture_time > delay_seconds:
                     img_path = os.path.join(letter_folder, f"img_{current_idx}.jpg")
-                    cv2.imwrite(img_path, frame)  # Guardamos el frame LIMPIO
+                    cv2.imwrite(img_path, frame)  # Guardamos el fotograma LIMPIO
                     current_idx += 1
                     last_capture_time = time.time()
 
-                    # Visual flash confirms that a frame was captured.
+                    # El destello visual confirma que se capturó un fotograma.
                     cv2.rectangle(
                         display_frame,
                         (0, 0),
@@ -174,8 +174,8 @@ def collect_alphabet_images(letter, target_images=200, delay_seconds=0.1):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    TARGET_IMAGES = 100 # Recommended for static signs
-    DELAY_SECONDS = 1.0 # Delay between captured frames.
+    TARGET_IMAGES = 100 # Recomendado para señas estáticas
+    DELAY_SECONDS = 1.0 # Retardo entre fotogramas capturados.
 
     create_folder_if_not_exists(DATASET_FOLDER)
     for letter in ALPHABET:

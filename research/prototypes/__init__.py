@@ -1,1 +1,1 @@
-"""Standalone OpenCV prototype scripts used during model integration."""
+"""Scripts de prototipo independientes de OpenCV usados durante la integración del modelo."""

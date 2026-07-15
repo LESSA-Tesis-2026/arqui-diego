@@ -1,14 +1,14 @@
-"""OpenCV prototype for automatic switching between word and alphabet models.
+"""Prototipo de OpenCV para el cambio automático entre los modelos de palabras y de alfabeto.
 
-Provides a research reference for hybrid-mode behavior outside the web/API stack.
+Provee una referencia de investigación para el comportamiento del modo híbrido fuera del stack web/API.
 """
 
 import cv2
 from pathlib import Path
 import sys
 
-# Allow these standalone prototype scripts to be run from the repository root
-# without installing the research package as a Python distribution.
+# Permite que estos scripts de prototipo independientes se ejecuten desde la raíz del repositorio
+# sin instalar el paquete de research como una distribución de Python.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -19,15 +19,15 @@ import collections
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-# Import both research configuration modules with explicit model-path aliases.
+# Importa ambos módulos de configuración de research con alias explícitos de ruta de modelo.
 from research.words.word_config import WORDS, MAX_FRAMES, MODEL_PATH as WORD_MODEL_PATH, LENGTH_KEYPOINTS as LENGTH_KEYPOINTS_WORDS, extract_keypoints as extract_keypoints_words, mediapipe_detection
 from research.alphabet.alphabet_config import ALPHABET, MODEL_PATH as ALPHABET_MODEL_PATH, extract_keypoints as extract_keypoints_alphabet
 
 def wrap_text_to_width(text, max_width, font, font_scale, thickness):
-    """Wrap OpenCV overlay text by rendered pixel width instead of character count.
+    """Ajusta el texto de la superposición de OpenCV por ancho de píxel renderizado en lugar de por conteo de caracteres.
 
-    Spanish phrases and joined letters have variable visual widths, so measuring with
-    OpenCV prevents text from overflowing the overlay box."""
+    Las frases en español y las letras unidas tienen anchos visuales variables, así que medir con
+    OpenCV evita que el texto se desborde de la caja de superposición."""
     if not text:
         return [""]
 
@@ -60,7 +60,7 @@ def wrap_text_to_width(text, max_width, font, font_scale, thickness):
     return lines
 
 def draw_keypoints(image, results):
-    """Draw pose and hand landmarks when debugging the hybrid prototype preview."""
+    """Dibuja los landmarks de pose y manos al depurar la vista previa del prototipo híbrido."""
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
     if results.pose_landmarks:
@@ -71,11 +71,11 @@ def draw_keypoints(image, results):
         mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
 def unified_real_time_translation(word_threshold=0.80, letter_threshold=0.85, motion_threshold=0.005):
-    """Run the automatic hybrid prototype that routes motion to words and stillness to letters.
+    """Ejecuta el prototipo híbrido automático que enruta el movimiento a palabras y la quietud a letras.
 
-    This script documents the heuristic used before the web/API implementation: dynamic
-    hand motion feeds the temporal word model, while static posture feeds the alphabet
-    model."""
+    Este script documenta la heurística usada antes de la implementación web/API: el movimiento
+    dinámico de la mano alimenta el modelo temporal de palabras, mientras que la postura estática alimenta el
+    modelo del alfabeto."""
     print("Loading dynamic word LSTM model...")
     word_model = load_model(WORD_MODEL_PATH)
 
@@ -95,7 +95,7 @@ def unified_real_time_translation(word_threshold=0.80, letter_threshold=0.85, mo
     last_emitted_item = ""
     rest_counter = 0
 
-    # Stability counters prevent rapid switching between dynamic and static recognition.
+    # Los contadores de estabilidad evitan el cambio rápido entre el reconocimiento dinámico y el estático.
     dynamic_frames = 0
     static_frames = 0
 
@@ -128,28 +128,28 @@ def unified_real_time_translation(word_threshold=0.80, letter_threshold=0.85, mo
                 letter_buffer.clear()
                 rest_counter += 1
 
-            # --- Motion-based routing between word and alphabet models ---
+            # --- Enrutamiento basado en movimiento entre los modelos de palabras y de alfabeto ---
             if len(sequence) == WINDOW_SIZE and hands_detected:
                 seq_array = np.array(sequence)
                 delta = np.vstack([seq_array[0:1, :], np.diff(seq_array, axis=0)])
 
-                # Average the last five frames to reduce hand-tremor noise in the motion router.
+                # Promedia los últimos cinco fotogramas para reducir el ruido del temblor de la mano en el enrutador de movimiento.
                 hand_motion_speed = np.mean(np.abs(delta[-5:, 180:]))
 
-                # --- Word mode (dynamic movement) ---
+                # --- Modo palabra (movimiento dinámico) ---
                 if hand_motion_speed > motion_threshold:
                     dynamic_frames += 1
                     static_frames = 0
                     current_status = f"WORD (speed: {hand_motion_speed:.4f})"
 
-                    # Sustained motion means we are transitioning to a word, so clear partial letters.
+                    # Un movimiento sostenido significa que estamos transicionando a una palabra, así que limpia las letras parciales.
                     if dynamic_frames > 4:
                         letter_buffer.clear()
-                        # Allow repeated letters after a clear hand movement separates emissions.
+                        # Permite letras repetidas después de que un movimiento claro de la mano separe las emisiones.
                         if len(last_emitted_item) == 1:
                             last_emitted_item = ""
 
-                    # Run the LSTM with position + delta + delta-delta features.
+                    # Ejecuta la LSTM con las características de posición + delta + delta-delta.
                     delta_delta = np.vstack([delta[0:1, :], np.diff(delta, axis=0)])
                     combined_seq = np.concatenate([seq_array, delta, delta_delta], axis=-1)
                     pad_seq = pad_sequences([combined_seq], maxlen=MAX_FRAMES, padding='post', dtype='float32')
@@ -166,17 +166,17 @@ def unified_real_time_translation(word_threshold=0.80, letter_threshold=0.85, mo
 
                     word_buffer.append(predicted_word)
 
-                # --- Alphabet mode (static posture) ---
+                # --- Modo alfabeto (postura estática) ---
                 else:
                     static_frames += 1
                     dynamic_frames = 0
                     current_status = f"LETTER (speed: {hand_motion_speed:.4f})"
 
-                    # Sustained stillness means partial word votes should be cleared.
+                    # Una quietud sostenida significa que se deben limpiar los votos parciales de palabra.
                     if static_frames > 4:
                         word_buffer.clear()
 
-                    # Run the dense alphabet classifier.
+                    # Ejecuta el clasificador denso del alfabeto.
                     if keypoints_letters is not None:
                         latest_frame = np.expand_dims(keypoints_letters, axis=0)
                         res_letter = alphabet_model.predict(latest_frame, verbose=0)[0]
@@ -192,8 +192,8 @@ def unified_real_time_translation(word_threshold=0.80, letter_threshold=0.85, mo
                         letter_buffer.clear()
                         current_letter = "-"
 
-            # --- Strict emission state machine ---
-            # 1. Render word probabilities, matching the original prototype layout.
+            # --- Máquina de estados de emisión estricta ---
+            # 1. Renderiza las probabilidades de palabra, replicando la disposición del prototipo original.
             if len(word_buffer) > 0:
                 counts = collections.Counter(word_buffer)
                 most_common, votes = counts.most_common(1)[0]
@@ -201,7 +201,7 @@ def unified_real_time_translation(word_threshold=0.80, letter_threshold=0.85, mo
                     sentence.append(f" {most_common} ")
                     last_emitted_item = most_common
 
-            # 2. Render letters quickly and responsively.
+            # 2. Renderiza las letras de forma rápida y con buena respuesta.
             if len(letter_buffer) > 0:
                 counts = collections.Counter(letter_buffer)
                 most_common, votes = counts.most_common(1)[0]
@@ -209,11 +209,11 @@ def unified_real_time_translation(word_threshold=0.80, letter_threshold=0.85, mo
                     sentence.append(most_common)
                     last_emitted_item = most_common
 
-            # Reset duplicate-emission guard after a long no-hands pause.
+            # Reinicia la protección contra emisiones duplicadas tras una larga pausa sin manos.
             if rest_counter > 20:
                 last_emitted_item = ""
 
-            # --- OpenCV interface ---
+            # --- Interfaz de OpenCV ---
             box_x0, box_y0 = 0, 0
             box_x1, box_y1 = 640, 120
             cv2.rectangle(image, (box_x0, box_y0), (box_x1, box_y1), (245, 117, 16), -1)
@@ -250,5 +250,5 @@ def unified_real_time_translation(word_threshold=0.80, letter_threshold=0.85, mo
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    # Thresholds tuned for maximum stability.
+    # Umbrales ajustados para máxima estabilidad.
     unified_real_time_translation(word_threshold=0.70, letter_threshold=0.80, motion_threshold=0.001)

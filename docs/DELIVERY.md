@@ -1,37 +1,37 @@
-# Thesis Delivery Guide
+# Guía de Entrega de Tesis
 
-This guide is the handoff checklist for running and reviewing the LESSA-to-Spanish thesis prototype.
+Esta guía es la lista de verificación de entrega para ejecutar y revisar el prototipo de tesis de traducción de LESSA a español.
 
-## Delivery Scope
+## Alcance de la Entrega
 
-Included in delivery:
+Incluido en la entrega:
 
-- `apps/api`: FastAPI backend for model serving and live translation streaming.
-- `apps/web`: Next.js frontend for the browser translation experience.
-- `research/words`: active word/phrase research workspace.
-- `research/alphabet`: active alphabet research workspace.
-- `research/prototypes`: OpenCV prototypes for research checks.
-- `docs`: setup, architecture, delivery, and future-work notes.
-- `docker-compose.yml`: local full-stack runtime.
+- `apps/api`: backend de FastAPI para el servido de modelos y el streaming de traducción en vivo.
+- `apps/web`: frontend de Next.js para la experiencia de traducción en navegador.
+- `research/words`: espacio de trabajo activo de investigación de palabra/frase.
+- `research/alphabet`: espacio de trabajo activo de investigación del alfabeto.
+- `research/prototypes`: prototipos de OpenCV para verificaciones de investigación.
+- `docs`: notas de configuración, arquitectura, entrega y trabajo futuro.
+- `docker-compose.yml`: runtime local de pila completa.
 
-Not part of source delivery:
+No forma parte de la entrega de código fuente:
 
-- Generated files such as `apps/web/next-env.d.ts`.
-- Local dependencies, caches, `.env`, and virtual environments.
-- Runtime model artifacts unless explicitly distributed through a separate release artifact.
+- Archivos generados como `apps/web/next-env.d.ts`.
+- Dependencias locales, cachés, `.env` y entornos virtuales.
+- Artefactos de modelo de runtime, a menos que se distribuyan explícitamente a través de un artefacto de lanzamiento separado.
 
-## Model Artifacts
+## Artefactos de Modelo
 
-Place runtime model artifacts at the repository root:
+Coloque los artefactos de modelo de runtime en la raíz del repositorio:
 
 ```text
 models/modelo_señas_lstm.keras
 models/modelo_letras.h5
 ```
 
-The word model is required for word recognition. The alphabet model is optional at startup; if missing, the API reports Alphabet mode unavailable.
+El modelo de palabra es requerido para el reconocimiento de palabras. El modelo de alfabeto es opcional al iniciar; si falta, la API reporta el modo Alphabet como no disponible.
 
-## Local Backend
+## Backend Local
 
 ```bash
 cd apps/api
@@ -40,19 +40,19 @@ uv sync
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Health check:
+Verificación de salud:
 
 ```text
 http://localhost:8000/api/v1/health
 ```
 
-Model metadata:
+Metadatos del modelo:
 
 ```text
 http://localhost:8000/api/v1/model/info
 ```
 
-## Local Frontend
+## Frontend Local
 
 ```bash
 cd apps/web
@@ -61,39 +61,39 @@ pnpm install
 pnpm dev
 ```
 
-Open:
+Abra:
 
 ```text
 http://localhost:3000
 ```
 
-The browser must be able to reach `NEXT_PUBLIC_API_URL`, which defaults to `http://localhost:8000`.
+El navegador debe poder alcanzar `NEXT_PUBLIC_API_URL`, cuyo valor predeterminado es `http://localhost:8000`.
 
-## Docker Runtime
+## Runtime de Docker
 
-From the repository root:
+Desde la raíz del repositorio:
 
 ```bash
 docker compose up --build
 ```
 
-Then open:
+Luego abra:
 
 ```text
 http://localhost:3000
 ```
 
-Docker mounts `./models` into the API container at `/models`.
+Docker monta `./models` dentro del contenedor de la API en `/models`.
 
-On Apple Silicon, if TensorFlow or MediaPipe wheels fail for native ARM builds, use:
+En Apple Silicon, si los wheels de TensorFlow o MediaPipe fallan para las builds nativas de ARM, use:
 
 ```bash
 DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose up --build
 ```
 
-## Verification Checklist
+## Lista de Verificación
 
-Run before thesis delivery:
+Ejecute antes de la entrega de tesis:
 
 ```bash
 cd apps/api
@@ -106,30 +106,30 @@ pnpm lint
 pnpm build
 ```
 
-After checks, inspect Git status. Expected local-only ignored files may include `.env`, `.venv`, `.next`, `node_modules`, `models/`, and `apps/web/next-env.d.ts`. They should not appear as tracked modifications.
+Después de las verificaciones, inspeccione el estado de Git. Los archivos ignorados que se esperan solo localmente pueden incluir `.env`, `.venv`, `.next`, `node_modules`, `models/` y `apps/web/next-env.d.ts`. No deben aparecer como modificaciones versionadas.
 
-## Future Work
+## Trabajo Futuro
 
-### Adding or changing signs
+### Agregar o cambiar señas
 
-Additions require research/model work first. Update datasets, train a new model, and only then update runtime labels. Runtime label order must match the trained artifact exactly.
+Las adiciones requieren primero trabajo de investigación/modelo. Actualice los datasets, entrene un nuevo modelo, y solo entonces actualice las etiquetas de runtime. El orden de las etiquetas de runtime debe coincidir exactamente con el artefacto entrenado.
 
-### Replacing model artifacts
+### Reemplazar artefactos de modelo
 
-When replacing models, verify:
+Al reemplazar modelos, verifique:
 
-- label order
-- expected input sequence length
-- feature length
-- face landmark selection
-- temporal delta order
-- confidence and voting thresholds
+- el orden de las etiquetas
+- la longitud de secuencia de entrada esperada
+- la longitud de características
+- la selección de puntos de referencia (landmarks) del rostro
+- el orden de los deltas temporales
+- los umbrales de confianza y votación
 
-Update docs and tests with the new contract.
+Actualice la documentación y las pruebas con el nuevo contrato.
 
-### Threshold tuning
+### Ajuste de umbrales
 
-Relevant backend settings include:
+Las configuraciones relevantes del backend incluyen:
 
 - `LESSA_WORD_CONFIDENCE_THRESHOLD`
 - `LESSA_ALPHABET_CONFIDENCE_THRESHOLD`
@@ -141,8 +141,8 @@ Relevant backend settings include:
 - `LESSA_ALPHABET_VOTING_BUFFER_SIZE`
 - `LESSA_ALPHABET_MIN_VOTES`
 
-Lower thresholds can make the demo feel faster but may emit incorrect signs. Higher thresholds can reduce errors but may feel less responsive.
+Umbrales más bajos pueden hacer que la demo se sienta más rápida, pero pueden emitir señas incorrectas. Umbrales más altos pueden reducir los errores, pero pueden sentirse menos responsivos.
 
-### Deployment
+### Despliegue
 
-This prototype is local/Docker-ready. A production deployment would still need explicit decisions for TLS, model artifact distribution, compute sizing, privacy, authentication if exposed beyond a demo network, observability, and camera/browser compatibility testing.
+Este prototipo está listo para local/Docker. Un despliegue de producción aún necesitaría decisiones explícitas sobre TLS, distribución de artefactos de modelo, dimensionamiento de cómputo, privacidad, autenticación si se expone más allá de una red de demostración, observabilidad y pruebas de compatibilidad de cámara/navegador.

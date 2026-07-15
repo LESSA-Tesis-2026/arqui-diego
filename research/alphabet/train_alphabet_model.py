@@ -1,4 +1,4 @@
-"""Train the static LESSA alphabet classifier from extracted H5 keypoints."""
+"""Entrena el clasificador del alfabeto estático de LESSA a partir de keypoints H5 extraídos."""
 
 import os
 import h5py
@@ -14,7 +14,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLRO
 from tensorflow.keras.optimizers import Adam
 from alphabet_config import *
 
-# Enable dynamic GPU memory growth so TensorFlow does not reserve all GPU memory up front.
+# Habilita el crecimiento dinámico de memoria de GPU para que TensorFlow no reserve toda la memoria de GPU de antemano.
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -26,7 +26,7 @@ if gpus:
 
 
 def load_static_data():
-    """Load static 306-value alphabet vectors and integer labels from per-letter H5 files."""
+    """Carga vectores estáticos del alfabeto de 306 valores y etiquetas enteras desde archivos H5 por letra."""
     X, y = [], []
     for label, letter in enumerate(ALPHABET):
         file_path = os.path.join(DATA_H5_FOLDER, f"{letter}.h5")
@@ -39,19 +39,19 @@ def load_static_data():
     return np.array(X), np.array(y)
 
 def build_static_model(input_dim, num_classes):
-    """Build the dense classifier used for static alphabet signs.
+    """Construye el clasificador denso usado para las señas del alfabeto estático.
 
-    The layer sizes form a funnel from 306 landmark features down to alphabet logits,
-    with batch normalization and dropout to reduce overfitting."""
+    Los tamaños de las capas forman un embudo desde las 306 características de landmarks hasta los logits del alfabeto,
+    con normalización por lotes y dropout para reducir el sobreajuste."""
     model = Sequential([
-        # Funnel architecture compresses the 306 landmark features before classification.
+        # La arquitectura de embudo comprime las 306 características de landmarks antes de la clasificación.
         Dense(256, activation='relu', input_shape=(input_dim,)),
         BatchNormalization(),
         Dropout(0.3),
 
         Dense(128, activation='relu'),
         BatchNormalization(),
-        Dropout(0.2), # Lower dropout as the representation narrows.
+        Dropout(0.2), # Menor dropout a medida que la representación se estrecha.
 
         Dense(64, activation='relu'),
         BatchNormalization(),
@@ -60,16 +60,16 @@ def build_static_model(input_dim, num_classes):
         Dense(num_classes, activation='softmax')
     ])
 
-    # Lower the learning rate to avoid erratic jumps in the curve.
+    # Reduce la tasa de aprendizaje para evitar saltos erráticos en la curva.
     optimizer = Adam(learning_rate=0.0001)
     model.compile(optimizer=optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return model
 
 def save_metrics(history, y_true, y_pred_classes):
-    """Write training curves, confusion matrix, and text classification report for review."""
+    """Escribe las curvas de entrenamiento, la matriz de confusión y el reporte de clasificación en texto para su revisión."""
     create_folder_if_not_exists(METRICS_FOLDER)
 
-    # 1. Training-history chart.
+    # 1. Gráfica del historial de entrenamiento.
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
     ax1.plot(history.history['accuracy'], label='Train')
     ax1.plot(history.history['val_accuracy'], label='Validation')
@@ -82,7 +82,7 @@ def save_metrics(history, y_true, y_pred_classes):
     plt.savefig(os.path.join(METRICS_FOLDER, 'training_history.png'))
     plt.close()
 
-    # 2. Confusion matrix.
+    # 2. Matriz de confusión.
     cm = confusion_matrix(y_true, y_pred_classes)
     plt.figure(figsize=(16, 14))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=ALPHABET, yticklabels=ALPHABET)
@@ -92,7 +92,7 @@ def save_metrics(history, y_true, y_pred_classes):
     plt.savefig(os.path.join(METRICS_FOLDER, 'confusion_matrix.png'))
     plt.close()
 
-    # 3. Text report.
+    # 3. Reporte en texto.
     report = classification_report(y_true, y_pred_classes, target_names=ALPHABET)
     with open(os.path.join(METRICS_FOLDER, 'classification_report.txt'), 'w') as f:
         f.write(report)
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     X_raw, y_raw = load_static_data()
     print(f"Total loaded images: {len(X_raw)}")
 
-    # Strict three-way split (70% train, 15% validation, 15% test).
+    # División estricta en tres partes (70% entrenamiento, 15% validación, 15% prueba).
     X_train_raw, X_temp_raw, y_train_raw, y_temp_raw = train_test_split(
         X_raw, y_raw, test_size=0.30, random_state=42, stratify=y_raw
     )
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001, verbose=1)
     ]
 
-    # Batch size 64 averages gradients and smooths the training curve.
+    # Un batch size de 64 promedia los gradientes y suaviza la curva de entrenamiento.
     history = model.fit(
         X_train_raw, y_train_raw,
         validation_data=(X_val, y_val),

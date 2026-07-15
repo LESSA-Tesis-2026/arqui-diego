@@ -1,8 +1,8 @@
-"""Stable LESSA model label contracts.
+"""Contratos estables de etiquetas del modelo LESSA.
 
-These strings are not general code identifiers. They are the exact class order used
-by the trained model artifacts, so changing spelling or ordering requires retraining
-or an explicit model-metadata migration.
+Estas cadenas no son identificadores de código generales. Son el orden exacto de clases que
+usan los artefactos del modelo entrenado, por lo que cambiar la ortografía o el orden requiere
+reentrenar o una migración explícita de los metadatos del modelo.
 """
 
 WORD_LABELS: list[str] = [
@@ -31,9 +31,9 @@ WORD_LABELS: list[str] = [
     "no se",
 ]
 
-# J and Z are intentionally absent because this alphabet classifier is static-frame
-# based; those LESSA letters are typically motion signs.
+# La J y la Z están ausentes intencionalmente porque este clasificador de alfabeto se basa
+# en fotogramas estáticos; esas letras de LESSA son típicamente señas de movimiento.
 ALPHABET_LABELS: list[str] = list("ABCDEFGHIKLMNOPQRSTUVWXY")
 
-# Backwards-compatible alias for older internal callers during refactors.
+# Alias retrocompatible para llamadores internos antiguos durante las refactorizaciones.
 LABELS = WORD_LABELS

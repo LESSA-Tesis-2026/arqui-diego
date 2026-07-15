@@ -13,12 +13,24 @@ VALID_MODES: set[str] = {"auto", "words", "alphabet"}
 
 @router.websocket("/translate/stream")
 async def translate_stream(websocket: WebSocket) -> None:
+    """Endpoint WebSocket de traducción en vivo. Mantiene una sesión por conexión.
+
+    Protocolo (mensajes JSON del cliente):
+      - {"type": "frame", "frame": "<jpeg base64>", "mode": "auto"|"words"|"alphabet"}
+        Procesa un fotograma y responde con el estado de traducción (ver TranslationResponse).
+        `type` es opcional y por defecto "frame"; `mode` por defecto "auto".
+      - {"type": "reset"}  Reinicia el estado de la sesión y responde con {"type": "reset", ...}.
+
+    Ante un mensaje inválido o un error de procesamiento, responde con {"type": "error", ...} y
+    mantiene la conexión abierta. Cierra al desconectarse el cliente (WebSocketDisconnect).
+    """
     await websocket.accept()
     session = model_service.create_session()
 
     try:
-        # MediaPipe Holistic owns native resources; keep it scoped to the socket
-        # lifetime so disconnects release camera-frame processing resources promptly.
+        # MediaPipe Holistic maneja recursos nativos; manténgalo acotado al ciclo de
+        # vida del socket para que las desconexiones liberen con prontitud los recursos
+        # de procesamiento de fotogramas de la cámara.
         with holistic_context() as holistic:
             while True:
                 message = await websocket.receive_json()
